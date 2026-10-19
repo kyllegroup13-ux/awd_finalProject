@@ -107,11 +107,12 @@
         /* Completeness */
         // "skipDefaultLibCheck": true,                      /* Skip type checking .d.ts files that are included with TypeScript. */
         "skipLibCheck": true /* Skip type checking all .d.ts files. */,
-        "baseUrl": ".",
+        "baseUrl": "." /* Base directory to resolve non-relative module names. */,
         "paths": {
             "@/*": ["./resources/js/*"],
             "ziggy-js": ["./vendor/tightenco/ziggy"]
         },
+        "ignoreDeprecations": "5.0",
         "jsx": "react-jsx"
     },
     "include": ["resources/js/**/*.ts", "resources/js/**/*.tsx"]

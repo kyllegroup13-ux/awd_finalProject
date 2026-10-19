@@ -1,119 +1,175 @@
+
 import { Head, useForm } from '@inertiajs/react';
-import { LoaderCircle } from 'lucide-react';
-import { FormEventHandler } from 'react';
+import { Eye, EyeOff, LoaderCircle, LockKeyhole, Mail, UserRound } from 'lucide-react';
+import { useState } from 'react';
+import type { FormEvent } from 'react';
 
-import InputError from '@/components/input-error';
-import TextLink from '@/components/text-link';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import AuthLayout from '@/layouts/auth-layout';
+import M3AuthLayout from '@/layouts/m3-auth-layout';
 
-interface RegisterForm {
+type RegisterForm = {
     name: string;
     email: string;
     password: string;
     password_confirmation: string;
-}
+};
+
+const inputClass =
+    'w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-11 pr-12 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white';
 
 export default function Register() {
-    const { data, setData, post, processing, errors, reset } = useForm<RegisterForm>({
-        name: '',
-        email: '',
-        password: '',
-        password_confirmation: '',
-    });
+    const [showPassword, setShowPassword] = useState(false);
 
-    const submit: FormEventHandler = (e) => {
+    const { data, setData, post, processing, errors, reset } =
+        useForm < RegisterForm > ({
+            name: '',
+            email: '',
+            password: '',
+            password_confirmation: '',
+        });
+
+    function submit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
-        post(route('register'), {
+
+        post('/register', {
             onFinish: () => reset('password', 'password_confirmation'),
         });
-    };
+    }
 
     return (
-        <AuthLayout title="Create an account" description="Enter your details below to create your account">
-            <Head title="Register" />
-            <form className="flex flex-col gap-6" onSubmit={submit}>
-                <div className="grid gap-6">
-                    <div className="grid gap-2">
-                        <Label htmlFor="name">Name</Label>
-                        <Input
+        <M3AuthLayout
+            mode="register"
+            title="Create your account"
+            description="Get started with the M3 Dry Goods management workspace."
+        >
+            <Head title="Register | M3 Dry Goods" />
+
+            <form onSubmit={submit} className="space-y-4">
+                <div>
+                    <label htmlFor="name" className="mb-2 block text-sm font-semibold">
+                        Full name
+                    </label>
+                    <div className="relative">
+                        <UserRound className="absolute left-3.5 top-3.5 size-5 text-slate-400" />
+                        <input
                             id="name"
-                            type="text"
                             required
-                            autoFocus
-                            tabIndex={1}
                             autoComplete="name"
                             value={data.name}
                             onChange={(e) => setData('name', e.target.value)}
-                            disabled={processing}
-                            placeholder="Full name"
+                            placeholder="Juan Dela Cruz"
+                            className={inputClass}
                         />
-                        <InputError message={errors.name} className="mt-2" />
                     </div>
+                    {errors.name && (
+                        <p className="mt-2 text-sm text-red-500">{errors.name}</p>
+                    )}
+                </div>
 
-                    <div className="grid gap-2">
-                        <Label htmlFor="email">Email address</Label>
-                        <Input
+                <div>
+                    <label htmlFor="email" className="mb-2 block text-sm font-semibold">
+                        Email address
+                    </label>
+                    <div className="relative">
+                        <Mail className="absolute left-3.5 top-3.5 size-5 text-slate-400" />
+                        <input
                             id="email"
                             type="email"
                             required
-                            tabIndex={2}
                             autoComplete="email"
                             value={data.email}
                             onChange={(e) => setData('email', e.target.value)}
-                            disabled={processing}
-                            placeholder="email@example.com"
+                            placeholder="you@example.com"
+                            className={inputClass}
                         />
-                        <InputError message={errors.email} />
                     </div>
+                    {errors.email && (
+                        <p className="mt-2 text-sm text-red-500">{errors.email}</p>
+                    )}
+                </div>
 
-                    <div className="grid gap-2">
-                        <Label htmlFor="password">Password</Label>
-                        <Input
+                <div>
+                    <label htmlFor="password" className="mb-2 block text-sm font-semibold">
+                        Password
+                    </label>
+                    <div className="relative">
+                        <LockKeyhole className="absolute left-3.5 top-3.5 size-5 text-slate-400" />
+                        <input
                             id="password"
-                            type="password"
+                            type={showPassword ? 'text' : 'password'}
                             required
-                            tabIndex={3}
                             autoComplete="new-password"
                             value={data.password}
                             onChange={(e) => setData('password', e.target.value)}
-                            disabled={processing}
-                            placeholder="Password"
+                            placeholder="Create a strong password"
+                            className={inputClass}
                         />
-                        <InputError message={errors.password} />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            aria-label={showPassword ? 'Hide password' : 'Show password'}
+                            className="absolute right-3.5 top-3.5 text-slate-400 hover:text-blue-600"
+                        >
+                            {showPassword ? (
+                                <EyeOff className="size-5" />
+                            ) : (
+                                <Eye className="size-5" />
+                            )}
+                        </button>
                     </div>
+                    {errors.password && (
+                        <p className="mt-2 text-sm text-red-500">{errors.password}</p>
+                    )}
+                </div>
 
-                    <div className="grid gap-2">
-                        <Label htmlFor="password_confirmation">Confirm password</Label>
-                        <Input
+                <div>
+                    <label
+                        htmlFor="password_confirmation"
+                        className="mb-2 block text-sm font-semibold"
+                    >
+                        Confirm password
+                    </label>
+                    <div className="relative">
+                        <LockKeyhole className="absolute left-3.5 top-3.5 size-5 text-slate-400" />
+                        <input
                             id="password_confirmation"
-                            type="password"
+                            type={showPassword ? 'text' : 'password'}
                             required
-                            tabIndex={4}
                             autoComplete="new-password"
                             value={data.password_confirmation}
-                            onChange={(e) => setData('password_confirmation', e.target.value)}
-                            disabled={processing}
-                            placeholder="Confirm password"
+                            onChange={(e) =>
+                                setData('password_confirmation', e.target.value)
+                            }
+                            placeholder="Confirm your password"
+                            className={inputClass}
                         />
-                        <InputError message={errors.password_confirmation} />
                     </div>
-
-                    <Button type="submit" className="mt-2 w-full" tabIndex={5} disabled={processing}>
-                        {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
-                        Create account
-                    </Button>
+                    {errors.password_confirmation && (
+                        <p className="mt-2 text-sm text-red-500">
+                            {errors.password_confirmation}
+                        </p>
+                    )}
                 </div>
 
-                <div className="text-muted-foreground text-center text-sm">
-                    Already have an account?{' '}
-                    <TextLink href={route('login')} tabIndex={6}>
-                        Log in
-                    </TextLink>
-                </div>
+                <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">
+                    Use at least 8 characters and a strong combination of letters,
+                    numbers, and symbols.
+                </p>
+
+                <button
+                    type="submit"
+                    disabled={processing}
+                    className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-4 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                    {processing ? (
+                        <>
+                            <LoaderCircle className="size-4 animate-spin" />
+                            Creating account...
+                        </>
+                    ) : (
+                        'Create account →'
+                    )}
+                </button>
             </form>
-        </AuthLayout>
+        </M3AuthLayout>
     );
 }

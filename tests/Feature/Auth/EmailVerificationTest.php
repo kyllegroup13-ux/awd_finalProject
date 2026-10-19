@@ -1,46 +1,33 @@
 <?php
 
 use App\Models\User;
-use Illuminate\Auth\Events\Verified;
-use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Facades\URL;
 
-test('email verification screen can be rendered', function () {
-    $user = User::factory()->unverified()->create();
+test('active cashiers can access POS without email verification', function () {
+    $cashier = User::factory()->create([
+        'role' => 'cashier',
+        'status' => 'Active',
+    ]);
 
-    $response = $this->actingAs($user)->get('/verify-email');
-
-    $response->assertStatus(200);
+    $this->actingAs($cashier)
+        ->get('/cashier/pos')
+        ->assertOk();
 });
 
-test('email can be verified', function () {
-    $user = User::factory()->unverified()->create();
+test('active owners can access dashboard without email verification', function () {
+    $owner = User::factory()->create([
+        'role' => 'owner',
+        'status' => 'Active',
+    ]);
 
-    Event::fake();
-
-    $verificationUrl = URL::temporarySignedRoute(
-        'verification.verify',
-        now()->addMinutes(60),
-        ['id' => $user->id, 'hash' => sha1($user->email)]
-    );
-
-    $response = $this->actingAs($user)->get($verificationUrl);
-
-    Event::assertDispatched(Verified::class);
-    expect($user->fresh()->hasVerifiedEmail())->toBeTrue();
-    $response->assertRedirect(route('dashboard', absolute: false).'?verified=1');
+    $this->actingAs($owner)
+        ->get('/dashboard')
+        ->assertOk();
 });
 
-test('email is not verified with invalid hash', function () {
-    $user = User::factory()->unverified()->create();
+test('guests cannot access protected pages', function () {
+    $this->get('/dashboard')
+        ->assertRedirect('/login');
 
-    $verificationUrl = URL::temporarySignedRoute(
-        'verification.verify',
-        now()->addMinutes(60),
-        ['id' => $user->id, 'hash' => sha1('wrong-email')]
-    );
-
-    $this->actingAs($user)->get($verificationUrl);
-
-    expect($user->fresh()->hasVerifiedEmail())->toBeFalse();
+    $this->get('/cashier/pos')
+        ->assertRedirect('/login');
 });

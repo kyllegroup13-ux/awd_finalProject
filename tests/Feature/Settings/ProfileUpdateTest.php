@@ -30,25 +30,31 @@ test('profile information can be updated', function () {
 
     expect($user->name)->toBe('Test User');
     expect($user->email)->toBe('test@example.com');
-    expect($user->email_verified_at)->toBeNull();
 });
 
-test('email verification status is unchanged when the email address is unchanged', function () {
+
+test('email address remains unchanged when only the name is updated', function () {
     $user = User::factory()->create();
+
+    $originalEmail = $user->email;
 
     $response = $this
         ->actingAs($user)
         ->patch('/settings/profile', [
-            'name' => 'Test User',
-            'email' => $user->email,
+            'name' => 'Updated User',
+            'email' => $originalEmail,
         ]);
 
     $response
         ->assertSessionHasNoErrors()
         ->assertRedirect('/settings/profile');
 
-    expect($user->refresh()->email_verified_at)->not->toBeNull();
+    $user->refresh();
+
+    expect($user->name)->toBe('Updated User');
+    expect($user->email)->toBe($originalEmail);
 });
+
 
 test('user can delete their account', function () {
     $user = User::factory()->create();
