@@ -1,6 +1,12 @@
 
 import { Head, useForm } from '@inertiajs/react';
-import { Eye, EyeOff, LoaderCircle, LockKeyhole, Mail } from 'lucide-react';
+import {
+    Eye,
+    EyeOff,
+    LoaderCircle,
+    LockKeyhole,
+    UserRound,
+} from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 
@@ -16,9 +22,6 @@ type LoginProps = {
     status?: string;
     canResetPassword: boolean;
 };
-
-const inputClass =
-    'w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-11 pr-12 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white';
 
 export default function Login({ status, canResetPassword }: LoginProps) {
     const [showPassword, setShowPassword] = useState(false);
@@ -41,24 +44,22 @@ export default function Login({ status, canResetPassword }: LoginProps) {
     return (
         <M3AuthLayout
             mode="login"
-            title="Welcome back"
-            description="Sign in to your M3 Dry Goods workspace to continue."
+            title="Sign In"
+            description=""
         >
-            <Head title="Login | M3 Dry Goods" />
+            <Head title="Sign In | M3 Dry Goods" />
 
             {status && (
-                <div className="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300">
+                <p className="mb-4 text-center text-sm text-green-600">
                     {status}
-                </div>
+                </p>
             )}
 
-            <form onSubmit={submit} className="space-y-5">
+            <form onSubmit={submit} className="space-y-3">
                 <div>
-                    <label htmlFor="email" className="mb-2 block text-sm font-semibold">
-                        Email address
-                    </label>
                     <div className="relative">
-                        <Mail className="absolute left-3.5 top-3.5 size-5 text-slate-400" />
+                        <UserRound className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
+
                         <input
                             id="email"
                             type="email"
@@ -66,85 +67,94 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                             required
                             autoFocus
                             value={data.email}
-                            onChange={(e) => setData('email', e.target.value)}
-                            placeholder="you@example.com"
-                            className={inputClass}
+                            onChange={(e) =>
+                                setData('email', e.target.value)
+                            }
+                            placeholder="Email"
+                            aria-label="Email"
+                            className="h-11 w-full rounded-lg border-2 border-gray-300 bg-white pl-11 pr-4 text-sm text-gray-900 outline-none transition focus:border-blue-500"
                         />
                     </div>
+
                     {errors.email && (
-                        <p className="mt-2 text-sm text-red-500">{errors.email}</p>
+                        <p className="mt-1 text-xs text-red-500">
+                            {errors.email}
+                        </p>
                     )}
                 </div>
 
                 <div>
-                    <div className="mb-2 flex items-center justify-between">
-                        <label htmlFor="password" className="text-sm font-semibold">
-                            Password
-                        </label>
-                        {canResetPassword && (
-                            <a
-                                href="/forgot-password"
-                                className="text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400"
-                            >
-                                Forgot password?
-                            </a>
-                        )}
-                    </div>
-
                     <div className="relative">
-                        <LockKeyhole className="absolute left-3.5 top-3.5 size-5 text-slate-400" />
+                        <LockKeyhole className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
+
                         <input
                             id="password"
                             type={showPassword ? 'text' : 'password'}
                             autoComplete="current-password"
                             required
                             value={data.password}
-                            onChange={(e) => setData('password', e.target.value)}
-                            placeholder="Enter your password"
-                            className={inputClass}
+                            onChange={(e) =>
+                                setData('password', e.target.value)
+                            }
+                            placeholder="Password"
+                            aria-label="Password"
+                            className="h-11 w-full rounded-lg border-2 border-gray-300 bg-white pl-11 pr-11 text-sm text-gray-900 outline-none transition focus:border-blue-500"
                         />
+
                         <button
                             type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            aria-label={showPassword ? 'Hide password' : 'Show password'}
-                            className="absolute right-3.5 top-3.5 text-slate-400 hover:text-blue-600"
+                            onClick={() =>
+                                setShowPassword(!showPassword)
+                            }
+                            aria-label={
+                                showPassword
+                                    ? 'Hide password'
+                                    : 'Show password'
+                            }
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
                         >
                             {showPassword ? (
-                                <EyeOff className="size-5" />
+                                <EyeOff className="size-4" />
                             ) : (
-                                <Eye className="size-5" />
+                                <Eye className="size-4" />
                             )}
                         </button>
                     </div>
+
                     {errors.password && (
-                        <p className="mt-2 text-sm text-red-500">{errors.password}</p>
+                        <p className="mt-1 text-xs text-red-500">
+                            {errors.password}
+                        </p>
                     )}
                 </div>
 
-                <label className="flex cursor-pointer items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
-                    <input
-                        type="checkbox"
-                        checked={data.remember}
-                        onChange={(e) => setData('remember', e.target.checked)}
-                        className="size-4 rounded border-slate-300 accent-blue-600"
-                    />
-                    Remember me
-                </label>
-
-                <button
-                    type="submit"
-                    disabled={processing}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-4 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                    {processing ? (
-                        <>
-                            <LoaderCircle className="size-4 animate-spin" />
-                            Signing in...
-                        </>
-                    ) : (
-                        'Sign in to workspace →'
+                <div className="flex justify-end">
+                    {canResetPassword && (
+                        <a
+                            href="/forgot-password"
+                            className="text-[10px] font-semibold text-red-500 hover:underline"
+                        >
+                            Forgot Password?
+                        </a>
                     )}
-                </button>
+                </div>
+
+                <div className="pt-5 text-center">
+                    <button
+                        type="submit"
+                        disabled={processing}
+                        className="inline-flex h-10 min-w-24 items-center justify-center gap-2 rounded-lg bg-[#BDBDBD] px-6 text-sm font-semibold text-black transition hover:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        {processing ? (
+                            <>
+                                <LoaderCircle className="size-4 animate-spin" />
+                                Logging in...
+                            </>
+                        ) : (
+                            'Login'
+                        )}
+                    </button>
+                </div>
             </form>
         </M3AuthLayout>
     );
