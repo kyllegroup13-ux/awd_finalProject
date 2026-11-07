@@ -30,6 +30,7 @@ function createSalesHistoryVariant(): ProductVariant
     $product = Product::create([
         'category_id' => $category->id,
         'name' => 'Sales History Shirt',
+        'image' => 'https://example.com/shirt.jpg',
         'status' => 'Active',
     ]);
 
@@ -79,7 +80,9 @@ test('cashier can view their own sales history', function () {
         ->assertOk()
         ->assertJsonPath('total', 1)
         ->assertJsonPath('data.0.id', $sale->id)
-        ->assertJsonPath('data.0.cashier_id', $cashier->id);
+        ->assertJsonPath('data.0.cashier_id', $cashier->id)
+        ->assertJsonCount(1, 'data.0.items')
+        ->assertJsonPath('data.0.items.0.product_variant.product.image', 'https://example.com/shirt.jpg');
 });
 
 test('cashier cannot see another cashiers sales in history', function () {

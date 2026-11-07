@@ -34,25 +34,24 @@ class RegisteredUserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|lowercase|email|max:255|unique:' . User::class,
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'role' => ['sometimes', 'in:cashier,owner'],
         ]);
+
+        $role = $request->input('role', 'cashier');
 
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'role' => $role,
+            'status' => 'Active',
         ]);
 
         event(new Registered($user));
 
-        Auth::login($user);
-
-        return match ($user->role) {
-            'owner' => to_route('dashboard'),
-            'cashier' => to_route('cashier.pos'),
-            default => redirect('/')->with(
-                'status',
-                'Your account is awaiting authorization.'
-            ),
-        };
+        return redirect()->route('login')->with(
+            'status',
+            'Account created successfully. Please log in.'
+        );
     }
 }

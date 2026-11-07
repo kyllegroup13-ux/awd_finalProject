@@ -1,7 +1,7 @@
 
-import { Link } from '@inertiajs/react';
-import { ShoppingBag } from 'lucide-react';
 import type { ReactNode } from 'react';
+
+import AppLogoIcon from '@/components/app-logo-icon';
 
 type M3AuthLayoutProps = {
     children: ReactNode;
@@ -28,16 +28,8 @@ export default function M3AuthLayout({
                 }`}
             >
                 <div className="mb-8 flex flex-col items-center text-center">
-                    <div className="mb-1 flex size-14 items-center justify-center bg-[#DEDEDE]">
-                        <div className="relative">
-                            <ShoppingBag
-                                className="size-8 text-white"
-                                strokeWidth={2.5}
-                            />
-                            <span className="absolute inset-x-0 top-3 text-center text-[12px] font-black text-blue-600">
-                                M3
-                            </span>
-                        </div>
+                    <div className="mb-1 flex size-14 items-center justify-center rounded-lg bg-[#DEDEDE] p-2">
+                        <AppLogoIcon className="size-11 text-white" />
                     </div>
 
                     <h1 className="text-[23px] font-bold leading-tight tracking-tight">
@@ -62,18 +54,6 @@ export default function M3AuthLayout({
                 </div>
 
                 {children}
-
-                {!isLogin && (
-                    <div className="mt-6 text-center text-sm text-gray-600">
-                        Already have an account?{' '}
-                        <Link
-                            href="/login"
-                            className="font-semibold text-blue-600 hover:underline"
-                        >
-                            Sign in
-                        </Link>
-                    </div>
-                )}
             </main>
         </div>
     );

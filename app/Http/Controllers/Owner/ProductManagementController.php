@@ -9,12 +9,17 @@ use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class ProductManagementController extends Controller
 {
     public function store(Request $request): JsonResponse
     {
+        $imageRules = $request->hasFile('image')
+            ? ['nullable', 'file', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048']
+            : ['nullable', 'string', 'max:255'];
+
         $validated = $request->validate([
             'category_id' => [
                 'required',
@@ -24,7 +29,7 @@ class ProductManagementController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'brand' => ['nullable', 'string', 'max:255'],
-            'image' => ['nullable', 'string', 'max:255'],
+            'image' => $imageRules,
             'status' => ['sometimes', Rule::in(['Active', 'Inactive'])],
 
             'variants' => ['required', 'array', 'min:1'],
@@ -52,13 +57,22 @@ class ProductManagementController extends Controller
             ],
         ]);
 
-        $product = DB::transaction(function () use ($validated, $request) {
+        $imageUrl = null;
+
+        if ($request->hasFile('image')) {
+            $storedImage = $request->file('image')->store('products', 'public');
+            $imageUrl = $storedImage ? '/storage/' . $storedImage : null;
+        } elseif (filled($request->input('image'))) {
+            $imageUrl = $request->input('image');
+        }
+
+        $product = DB::transaction(function () use ($validated, $request, $imageUrl) {
             $product = Product::create([
                 'category_id' => $validated['category_id'],
                 'name' => $validated['name'],
                 'description' => $validated['description'] ?? null,
                 'brand' => $validated['brand'] ?? null,
-                'image' => $validated['image'] ?? null,
+                'image' => $imageUrl,
                 'status' => $validated['status'] ?? 'Active',
             ]);
 
@@ -97,6 +111,10 @@ class ProductManagementController extends Controller
 
     public function update(Request $request, Product $product): JsonResponse
     {
+        $imageRules = $request->hasFile('image')
+            ? ['sometimes', 'nullable', 'file', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048']
+            : ['sometimes', 'nullable', 'string', 'max:255'];
+
         $validated = $request->validate([
             'category_id' => [
                 'sometimes',
@@ -121,18 +139,20 @@ class ProductManagementController extends Controller
                 'string',
                 'max:255',
             ],
-            'image' => [
-                'sometimes',
-                'nullable',
-                'string',
-                'max:255',
-            ],
+            'image' => $imageRules,
             'status' => [
                 'sometimes',
                 'required',
                 Rule::in(['Active', 'Inactive']),
             ],
         ]);
+
+        if ($request->hasFile('image')) {
+            $storedImage = $request->file('image')->store('products', 'public');
+            $validated['image'] = $storedImage ? '/storage/' . $storedImage : $product->image;
+        } elseif ($request->filled('image')) {
+            $validated['image'] = $request->input('image');
+        }
 
         $product->update($validated);
 

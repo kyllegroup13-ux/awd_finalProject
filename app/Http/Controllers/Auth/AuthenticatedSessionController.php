@@ -43,7 +43,7 @@ class AuthenticatedSessionController extends Controller
 
         return match ($user->role) {
             'owner' => redirect()->route('dashboard'),
-            'cashier' => redirect()->route('cashier.pos'),
+            'cashier' => redirect()->route('cashier.sales'),
             default => redirect('/')->withErrors([
                 'email' => 'Your account does not have an assigned role.',
             ]),

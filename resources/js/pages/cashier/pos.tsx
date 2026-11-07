@@ -5,9 +5,10 @@ import {
     Minus,
     Plus,
     Search,
-    ShoppingCart,
+    ShoppingBag,
     Trash2,
     Wallet,
+    ArrowLeft,
 } from 'lucide-react';
 
 type ProductVariant = {
@@ -23,6 +24,7 @@ type Product = {
     id: number;
     name: string;
     status: string;
+    image?: string | null;
     variants: ProductVariant[];
 };
 
@@ -583,299 +585,185 @@ export default function CashierPOS() {
 
 
 
+
     return (
         <>
-            <Head title="Cashier POS" />
-
-            <div className="min-h-screen bg-background p-6 text-foreground">
-                <div className="mx-auto max-w-7xl space-y-6">
-                    <header className="flex flex-wrap items-center justify-between gap-4">
-                        <div>
-                            <h1 className="text-3xl font-bold">
-                                M3 Dry Goods
-                            </h1>
-                            <p className="text-muted-foreground">
-                                Cashier Point of Sale
-                            </p>
-                        </div>
-                        <Link
-                            href="/cashier/sales"
-                            className="inline-flex items-center justify-center rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
-                        >
-                            Sales History
+            <Head title="New Transaction | M3 Dry Goods" />
+            <div className="min-h-screen bg-[#F5F5F5] px-4 py-6 text-[#202020] sm:px-7 lg:px-9">
+                <div className="mx-auto max-w-[1500px]">
+                    <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
+                        <Link href="/cashier/sales" className="inline-flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-blue-600">
+                            <ArrowLeft className="size-4" /> Dashboard
                         </Link>
+                        <h1 className="text-lg font-extrabold">New Transaction</h1>
+                        <span className="text-xs text-gray-500">M3 Dry Goods · Cashier POS</span>
                     </header>
 
-                    <div className="grid gap-6 lg:grid-cols-3">
-                        <section className="space-y-4 lg:col-span-2">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+                    <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(370px,1fr)]">
+                        <section className="min-w-0">
+                            <div className="relative mb-4">
+                                <Search className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-gray-400" />
                                 <input
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
-                                    placeholder="Search products or SKU..."
-                                    className="w-full rounded-lg border bg-background py-3 pl-11 pr-4"
+                                    placeholder="Search Products or SKU..."
+                                    aria-label="Search products or SKU"
+                                    className="h-12 w-full rounded-lg border-2 border-[#D0D0D0] bg-white pl-12 pr-4 text-sm outline-none focus:border-blue-400"
                                 />
                             </div>
-
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                {filteredProducts.map((product) => (
-                                    <div
-                                        key={product.id}
-                                        className="rounded-xl border bg-card p-4"
-                                    >
-                                        <h2 className="mb-3 font-semibold">
-                                            {product.name}
-                                        </h2>
-
-                                        <div className="space-y-2">
-                                            {product.variants.map((variant) => (
-                                                <div
-                                                    key={variant.id}
-                                                    className="flex items-center justify-between gap-2 rounded-lg border p-3"
-                                                >
-                                                    <div>
-                                                        <p className="text-sm font-medium">
-                                                            {variant.size} / {variant.color}
-                                                        </p>
-                                                        <p className="text-xs text-muted-foreground">
-                                                            {variant.sku}
-                                                        </p>
-                                                        <p className="font-semibold">
-                                                            {money(Number(variant.price))}
-                                                        </p>
-                                                        <p className="text-xs">
-                                                            Stock: {variant.stock_quantity}
-                                                        </p>
-                                                    </div>
-
-                                                    <button
-                                                        onClick={() =>
-                                                            addToCart(product, variant)
-                                                        }
-                                                        disabled={variant.stock_quantity <= 0}
-                                                        className="rounded-lg bg-primary p-2 text-primary-foreground disabled:opacity-50"
-                                                    >
-                                                        <Plus size={18} />
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ))}
+                            <div className="mb-4 flex flex-wrap gap-2">
+                                <span className="rounded-lg bg-[#D8D8D8] px-5 py-3 text-xs font-bold">All Items</span>
+                                <span className="self-center text-xs text-gray-500">Select a product variant to add it to the sale</span>
                             </div>
 
+                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+                                {filteredProducts.flatMap((product) =>
+                                    product.variants.map((variant) => {
+                                        const stock = variant.stock_quantity;
+                                        const cartQuantity = cart.find((item) => item.variantId === variant.id)?.quantity ?? 0;
+                                        const unavailable = stock <= 0 || cartQuantity >= stock || loading || hasPendingCheckout;
+                                        const image = product.image
+                                            ? (product.image.startsWith('http') || product.image.startsWith('/')
+                                                ? product.image
+                                                : `/storage/${product.image}`)
+                                            : null;
+                                        return (
+                                            <article key={variant.id} className="flex min-w-0 flex-col rounded-lg border border-[#D8D8D8] bg-white p-2 shadow-sm">
+                                                <div className="mb-2 flex aspect-[4/3] items-center justify-center overflow-hidden rounded-md bg-[#EEEEEE]">
+                                                    {image ? (
+                                                        <img src={image} alt={product.name} className="h-full w-full object-contain" loading="lazy" />
+                                                    ) : (
+                                                        <ShoppingBag className="size-10 text-gray-300" aria-hidden="true" />
+                                                    )}
+                                                </div>
+                                                <h2 className="truncate text-xs font-bold" title={product.name}>{product.name}</h2>
+                                                <p className="mt-0.5 text-xs font-extrabold">{money(Number(variant.price))}</p>
+                                                <p className={`mt-1 text-[11px] font-semibold ${stock > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                                    {stock > 0 ? `In Stock (${stock})` : 'Out of Stock'}
+                                                </p>
+                                                <div className="mt-auto flex flex-wrap items-center gap-1 pt-2">
+                                                    <span className="min-w-0 flex-1 truncate rounded border bg-[#F4F4F4] px-1.5 py-1.5 text-[10px] text-gray-600" title={`${variant.size ?? 'No size'} / ${variant.color ?? 'No color'} · ${variant.sku}`}>
+                                                        {variant.size || '—'} · {variant.color || '—'}
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => addToCart(product, variant)}
+                                                        disabled={unavailable}
+                                                        aria-label={`Add ${product.name}, ${variant.size ?? ''} ${variant.color ?? ''} to sale`}
+                                                        className="flex size-8 items-center justify-center rounded bg-[#D8D8D8] hover:bg-[#B9B9B9] disabled:cursor-not-allowed disabled:opacity-40"
+                                                    >
+                                                        <Plus className="size-4" />
+                                                    </button>
+                                                </div>
+                                            </article>
+                                        );
+                                    })
+                                )}
+                            </div>
                             {products.length === 0 && (
-                                <div className="rounded-xl border p-10 text-center text-muted-foreground">
-                                    Product catalog is not loaded yet.
-                                </div>
+                                <p className="mt-5 rounded-lg border border-dashed border-gray-300 bg-white p-6 text-center text-sm text-gray-500">No products available. Products will appear here when added by the Owner.</p>
+                            )}
+                            {products.length > 0 && filteredProducts.length === 0 && (
+                                <p className="mt-5 text-center text-sm text-gray-500">No matching products.</p>
                             )}
                         </section>
 
-                        <aside className="space-y-5 rounded-xl border bg-card p-5">
-                            <div className="flex items-center gap-2">
-                                <ShoppingCart size={22} />
-                                <h2 className="text-xl font-bold">
-                                    Shopping Cart
-                                </h2>
+                        <aside className="min-w-0 rounded-lg bg-[#DADADA] p-3 sm:p-4">
+                            <div className="mb-3 flex items-center justify-between gap-3">
+                                <h2 className="text-base font-extrabold">Current Sale</h2>
+                                <button
+                                    type="button"
+                                    onClick={() => { setCart([]); setAmountReceived(''); setGcashReference(''); setError(''); }}
+                                    disabled={loading || hasPendingCheckout || cart.length === 0}
+                                    className="rounded-md bg-[#FF787E] px-4 py-2 text-xs font-bold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                >Delete</button>
                             </div>
 
-                            {cart.length === 0 ? (
-                                <p className="py-8 text-center text-muted-foreground">
-                                    No items added yet.
-                                </p>
+                            <div className="overflow-x-auto">
+                                <div className="min-w-[325px]">
+                                    <div className="grid grid-cols-[minmax(0,1.5fr)_75px_78px_86px_28px] gap-1 rounded-md bg-white px-2 py-3 text-[10px] font-bold">
+                                        <span>Item</span><span>Price</span><span>Qty</span><span>Subtotal</span><span />
+                                    </div>
+                                    <div className="max-h-[300px] space-y-2 overflow-y-auto py-3">
+                                        {cart.length === 0 ? (
+                                            <p className="rounded-md bg-white/60 px-3 py-8 text-center text-xs text-gray-500">No items added yet</p>
+                                        ) : cart.map((item) => (
+                                            <div key={item.variantId} className="grid grid-cols-[minmax(0,1.5fr)_75px_78px_86px_28px] items-center gap-1 border-b border-gray-300 pb-2 text-[11px]">
+                                                <div className="min-w-0">
+                                                    <p className="truncate font-bold" title={item.name}>{item.name}</p>
+                                                    <p className="truncate text-[10px] text-gray-500">{item.color || '—'} / {item.size || '—'}</p>
+                                                </div>
+                                                <span className="text-[10px] font-semibold">{money(item.price)}</span>
+                                                <div className="inline-flex items-center justify-start gap-1">
+                                                    <button type="button" onClick={() => updateQuantity(item.variantId, -1)} disabled={loading || hasPendingCheckout} aria-label={`Decrease ${item.name} quantity`} className="flex size-5 items-center justify-center bg-white disabled:opacity-40"><Minus className="size-3" /></button>
+                                                    <span className="min-w-3 text-center font-bold">{item.quantity}</span>
+                                                    <button type="button" onClick={() => updateQuantity(item.variantId, 1)} disabled={loading || hasPendingCheckout || item.quantity >= item.stock} aria-label={`Increase ${item.name} quantity`} className="flex size-5 items-center justify-center bg-white disabled:opacity-40"><Plus className="size-3" /></button>
+                                                </div>
+                                                <span className="text-[10px] font-bold">{money(item.price * item.quantity)}</span>
+                                                <button type="button" onClick={() => removeFromCart(item.variantId)} disabled={loading || hasPendingCheckout} aria-label={`Remove ${item.name}`} className="flex size-6 items-center justify-center rounded bg-[#F87780] text-white disabled:opacity-40"><Trash2 className="size-3.5" /></button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mb-8 flex items-center justify-between rounded-md bg-[#80C6E8] px-4 py-3 font-extrabold">
+                                <span>Total</span><span>{money(subtotal)}</span>
+                            </div>
+
+                            <div className="mb-3 flex flex-wrap items-center gap-2">
+                                <span className="text-xs font-bold">Payment:</span>
+                                <div className="inline-flex overflow-hidden rounded-md bg-white p-1 text-xs">
+                                    <button type="button" onClick={() => { setPaymentMethod('cash'); setError(''); }} className={`rounded px-3 py-1.5 font-semibold ${paymentMethod === 'cash' ? 'bg-[#F7C65D]' : 'hover:bg-gray-100'}`}><Wallet className="mr-1 inline size-3" />Cash</button>
+                                    <button type="button" onClick={() => { setPaymentMethod('gcash'); setError(''); }} className={`rounded px-3 py-1.5 font-semibold ${paymentMethod === 'gcash' ? 'bg-[#80C6E8]' : 'hover:bg-gray-100'}`}>GCash</button>
+                                </div>
+                            </div>
+                            {paymentMethod === 'cash' ? (
+                                <div className="mb-3 grid grid-cols-2 gap-3">
+                                    <label className="block min-w-0 text-[11px] font-bold">
+                                        Amount Received
+                                        <div className="mt-1 flex h-11 overflow-hidden rounded-md bg-white">
+                                            <span className="flex items-center bg-[#F7C65D] px-2 text-xs font-bold">Php</span>
+                                            <input type="number" min="0" step="0.01" value={amountReceived} onChange={(e) => setAmountReceived(e.target.value)} placeholder="0.00" className="w-full min-w-0 px-2 text-sm outline-none" />
+                                        </div>
+                                    </label>
+                                    <div className="rounded-md bg-[#9EDC9C] px-3 py-2 text-[11px] font-bold">
+                                        Change
+                                        <div className="mt-1 text-sm">{money(change)}</div>
+                                    </div>
+                                </div>
                             ) : (
-                                <div className="space-y-4">
-                                    {cart.map((item) => (
-                                        <div
-                                            key={item.variantId}
-                                            className="space-y-2 border-b pb-4"
-                                        >
-                                            <div className="flex justify-between gap-2">
-                                                <div>
-                                                    <p className="font-medium">{item.name}</p>
-                                                    <p className="text-xs text-muted-foreground">
-                                                        {item.size} / {item.color}
-                                                    </p>
-                                                </div>
-                                                <button
-                                                    onClick={() =>
-                                                        removeFromCart(item.variantId)
-                                                    }
-                                                    aria-label="Remove item"
-                                                >
-                                                    <Trash2 size={17} />
-                                                </button>
-                                            </div>
-
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                    <button
-                                                        onClick={() =>
-                                                            updateQuantity(item.variantId, -1)
-                                                        }
-                                                        aria-label="Decrease quantity"
-                                                    >
-                                                        <Minus size={16} />
-                                                    </button>
-
-                                                    <span>{item.quantity}</span>
-
-                                                    <button
-                                                        onClick={() =>
-                                                            updateQuantity(item.variantId, 1)
-                                                        }
-                                                        disabled={item.quantity >= item.stock}
-                                                        aria-label="Increase quantity"
-                                                    >
-                                                        <Plus size={16} />
-                                                    </button>
-                                                </div>
-
-                                                <span className="font-semibold">
-                                                    {money(item.price * item.quantity)}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
+                                <label className="mb-3 block text-xs font-bold">
+                                    GCash Reference Number
+                                    <input value={gcashReference} onChange={(e) => setGcashReference(e.target.value)} placeholder="Enter verified reference" className="mt-1 h-11 w-full rounded-md bg-white px-3 text-sm outline-none" />
+                                    <span className="mt-1 block text-[10px] font-normal text-gray-600">Manually verify payment before checkout.</span>
+                                </label>
                             )}
 
-                            <div className="flex justify-between border-t pt-4 text-lg font-bold">
-                                <span>Total</span>
-                                <span>{money(subtotal)}</span>
-                            </div>
-
-                            <div className="space-y-3">
-                                <h3 className="flex items-center gap-2 font-semibold">
-                                    <Wallet size={18} />
-                                    Payment Method
-                                </h3>
-
-                                <div className="grid grid-cols-2 gap-2">
-                                    {(['cash', 'gcash'] as const).map((method) => (
-                                        <button
-                                            key={method}
-                                            onClick={() => setPaymentMethod(method)}
-                                            className={`rounded-lg border p-3 ${paymentMethod === method
-                                                ? 'border-primary bg-primary/10 font-semibold'
-                                                : ''
-                                                }`}
-                                        >
-                                            {method === 'cash' ? 'Cash' : 'GCash'}
-                                        </button>
-                                    ))}
-                                </div>
-
-                                {paymentMethod === 'cash' ? (
-                                    <>
-                                        <label className="block text-sm">
-                                            Cash Received
-                                        </label>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            step="0.01"
-                                            value={amountReceived}
-                                            onChange={(e) =>
-                                                setAmountReceived(e.target.value)
-                                            }
-                                            className="w-full rounded-lg border bg-background p-3"
-                                            placeholder="0.00"
-                                        />
-
-                                        <div className="flex justify-between">
-                                            <span>Change</span>
-                                            <strong>{money(change)}</strong>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <>
-                                        <label className="block text-sm">
-                                            GCash Reference Number
-                                        </label>
-                                        <input
-                                            value={gcashReference}
-                                            onChange={(e) =>
-                                                setGcashReference(e.target.value)
-                                            }
-                                            className="w-full rounded-lg border bg-background p-3"
-                                            placeholder="Enter reference number"
-                                        />
-                                        <p className="text-xs text-muted-foreground">
-                                            Verify payment manually before completing checkout.
-                                        </p>
-                                    </>
-                                )}
-                            </div>
-
-                            {error && (
-                                <p className="text-sm text-destructive">{error}</p>
-                            )}
-
+                            {error && <p role="alert" className="mb-3 rounded-md bg-red-50 p-3 text-xs text-red-700">{error}</p>}
                             {success && (
-                                <div
-                                    role="status"
-                                    className="rounded-lg border border-green-500/40 bg-green-500/10 p-4 text-sm text-green-600 dark:text-green-400"
-                                >
-                                    <p className="font-semibold">{success}</p>
-                                    {lastReceipt && (
-                                        <p className="mt-1">Receipt Number: {lastReceipt}</p>
-                                    )}
+                                <div role="status" className="mb-3 rounded-md bg-green-50 p-3 text-xs text-green-800">
+                                    <p className="font-bold">{success}</p>
+                                    {lastReceipt && <p className="mt-1">Receipt: {lastReceipt}</p>}
+                                    <Link href="/cashier/sales" className="mt-2 inline-block font-bold underline">Back to Dashboard</Link>
                                 </div>
                             )}
-
-
                             {hasPendingCheckout && (
-                                <div className="space-y-2 rounded-lg border p-4">
-                                    <p className="text-sm font-medium">
-                                        A previous checkout needs confirmation.
-                                    </p>
-
-                                    <p className="text-xs text-muted-foreground">
-                                        Retry the saved transaction using its original
-                                        details. Do not collect payment again.
-                                    </p>
-
-                                    <button
-                                        type="button"
-                                        disabled={loading}
-                                        onClick={retryPendingCheckout}
-                                        className="w-full rounded-lg border border-primary px-4 py-3 font-semibold text-primary disabled:opacity-50"
-                                    >
-                                        {loading
-                                            ? 'Confirming Checkout...'
-                                            : 'Retry Pending Checkout'}
-                                    </button>
-
-                                    <Link
-                                        href="/cashier/sales"
-                                        className="block text-center text-sm underline"
-                                    >
-                                        Check Sales History
-                                    </Link>
+                                <div className="mb-3 space-y-2 rounded-md border border-amber-400 bg-amber-50 p-3 text-xs">
+                                    <p className="font-bold">An earlier checkout needs confirmation.</p>
+                                    <p>Check Sales History before trying again. Do not collect payment twice.</p>
+                                    <button type="button" onClick={retryPendingCheckout} disabled={loading} className="block w-full rounded-md bg-amber-200 p-2 font-bold disabled:opacity-50">{loading ? 'Confirming...' : 'Retry Saved Checkout'}</button>
+                                    <Link href="/cashier/sales" className="block text-center underline">Check Sales History</Link>
                                 </div>
                             )}
-
-
                             <button
                                 type="button"
-                                disabled={
-                                    loading ||
-                                    hasPendingCheckout ||
-                                    cart.length === 0 ||
-                                    (paymentMethod === 'cash' &&
-                                        (!amountReceived ||
-                                            !Number.isFinite(Number(amountReceived)) ||
-                                            Number(amountReceived) < subtotal)) ||
-                                    (paymentMethod === 'gcash' && !gcashReference.trim())
-                                }
                                 onClick={completeSale}
-                                className="w-full rounded-lg bg-primary py-3 font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                                disabled={loading || hasPendingCheckout || cart.length === 0 || (paymentMethod === 'cash' && (!amountReceived || !Number.isFinite(Number(amountReceived)) || Number(amountReceived) < subtotal)) || (paymentMethod === 'gcash' && !gcashReference.trim())}
+                                className="w-full rounded-md bg-[#419FD0] px-4 py-3 text-sm font-bold text-white hover:bg-[#2989BE] disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                                {loading ? 'Processing Sale...' : 'Complete Sale'}
+                                {loading ? 'Processing Transaction...' : 'Complete Transaction'}
                             </button>
-
                         </aside>
                     </div>
                 </div>

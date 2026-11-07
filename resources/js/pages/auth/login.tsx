@@ -1,5 +1,5 @@
 
-import { Head, useForm } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import {
     Eye,
     EyeOff,
@@ -154,6 +154,18 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                             'Login'
                         )}
                     </button>
+                </div>
+
+                <div className="pt-4 text-center">
+                    <p className="text-sm text-slate-600">
+                        Need an account?{' '}
+                        <Link
+                            href="/register"
+                            className="font-semibold text-[#1C3155] hover:underline"
+                        >
+                            Create account
+                        </Link>
+                    </p>
                 </div>
             </form>
         </M3AuthLayout>

@@ -13,7 +13,11 @@ class CashierSaleController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $sales = Sale::with(['cashier:id,name', 'payment'])
+        $sales = Sale::with([
+            'cashier:id,name',
+            'payment',
+            'items.productVariant.product',
+        ])
             ->where('cashier_id', $request->user()->id)
             ->latest()
             ->paginate(15);

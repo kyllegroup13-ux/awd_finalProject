@@ -7,6 +7,10 @@ test('guests are redirected to the login page', function () {
     $this->get('/dashboard')->assertRedirect('/login');
 });
 
+test('guests are redirected from the root route to the login page', function () {
+    $this->get('/')->assertRedirect('/login');
+});
+
 test('active owners can visit the dashboard', function () {
     $owner = User::factory()->create([
         'role' => 'owner',
