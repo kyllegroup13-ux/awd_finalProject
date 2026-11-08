@@ -1,10 +1,13 @@
 <?php
 
 use App\Models\Category;
+use App\Models\Product;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+
+use function Pest\Laravel\actingAs;
 
 it('allows an owner to upload a product image when creating a product', function () {
     Storage::fake('public');
@@ -17,10 +20,9 @@ it('allows an owner to upload a product image when creating a product', function
         'name' => 'Tops',
     ]);
 
-    $response = $this->actingAs($owner)->post('/owner/products', [
+    $response = actingAs($owner)->post('/owner/products', [
         'category_id' => $category->id,
         'name' => 'Featured Shirt',
-        'brand' => 'M3',
         'description' => 'A sample image upload test product.',
         'status' => 'Active',
         'image' => UploadedFile::fake()->create('featured-shirt.jpg', 100, 'image/jpeg'),
@@ -36,10 +38,10 @@ it('allows an owner to upload a product image when creating a product', function
 
     $response->assertStatus(201);
 
-    $product = \App\Models\Product::where('name', 'Featured Shirt')->firstOrFail();
+    $product = Product::where('name', 'Featured Shirt')->firstOrFail();
     expect($product->image)->not->toBeNull()
         ->and(Str::startsWith($product->image, '/storage/'))->toBeTrue();
 
     $storedPath = Str::after($product->image, '/storage/');
-    Storage::disk('public')->assertExists($storedPath);
+    expect(Storage::disk('public')->exists($storedPath))->toBeTrue();
 });

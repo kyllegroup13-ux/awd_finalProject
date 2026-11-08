@@ -2,13 +2,19 @@
 <?php
 
 use App\Models\User;
+use Tests\TestCase;
+
+use function Pest\Laravel\actingAs;
+use function Pest\Laravel\get;
+
+uses(TestCase::class);
 
 test('guests are redirected to the login page', function () {
-    $this->get('/dashboard')->assertRedirect('/login');
+    get('/dashboard')->assertRedirect('/login');
 });
 
 test('guests are redirected from the root route to the login page', function () {
-    $this->get('/')->assertRedirect('/login');
+    get('/')->assertRedirect('/login');
 });
 
 test('active owners can visit the dashboard', function () {
@@ -17,7 +23,7 @@ test('active owners can visit the dashboard', function () {
         'status' => 'Active',
     ]);
 
-    $this->actingAs($owner)
+    actingAs($owner)
         ->get('/dashboard')
         ->assertOk();
 });
@@ -28,7 +34,7 @@ test('cashiers cannot access the owner dashboard', function () {
         'status' => 'Active',
     ]);
 
-    $this->actingAs($cashier)
+    actingAs($cashier)
         ->get('/dashboard')
         ->assertForbidden();
 });

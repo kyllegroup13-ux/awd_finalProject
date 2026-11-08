@@ -3,19 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
-use Illuminate\Http\Request;
-
 
 class ProductController extends Controller
 {
-
     public function index()
     {
-        $products = Product::with([
+        $products = Product::notArchived()->with([
             'category',
-            'variants'
+            'variants',
         ])->get();
-
 
         $data = $products->map(function ($product) {
 
@@ -23,38 +19,28 @@ class ProductController extends Controller
 
                 'id' => $product->id,
 
-                'product_no' =>
-                $product->variants->first()->sku ?? null,
+                'product_no' => $product->variants->first()->sku ?? null,
 
-                'image' =>
-                $product->image,
+                'image' => $product->image,
 
-                'name' =>
-                $product->name,
+                'name' => $product->name,
 
-                'category' =>
-                $product->category->name,
+                'category' => $product->category->name,
 
-                'sizes' =>
-                $product->variants->pluck('size'),
+                'sizes' => $product->variants->pluck('size'),
 
-                'colors' =>
-                $product->variants->pluck('color'),
+                'colors' => $product->variants->pluck('color'),
 
-                'price' =>
-                $product->variants->first()->price,
+                'price' => $product->variants->first()->price,
 
-                'stock' =>
-                $product->variants->sum('stock_quantity'),
+                'stock' => $product->variants->sum('stock_quantity'),
 
-                'status' =>
-                $product->variants->sum('stock_quantity') > 0
+                'status' => $product->variants->sum('stock_quantity') > 0
                     ? 'In Stock'
-                    : 'Out of Stock'
+                    : 'Out of Stock',
 
             ];
         });
-
 
         return response()->json($data);
     }

@@ -7,6 +7,7 @@ use App\Models\Sale;
 use App\Models\User;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
+use Tests\TestCase;
 
 function makeApiTestUser(
     string $role = 'cashier',
@@ -14,7 +15,7 @@ function makeApiTestUser(
 ): User {
     return User::create([
         'name' => 'API Test User',
-        'email' => Str::uuid() . '@example.test',
+        'email' => Str::uuid().'@example.test',
         'password' => 'test-password-123',
         'role' => $role,
         'status' => $status,
@@ -62,6 +63,7 @@ function makeApiCheckoutPayload(
 }
 
 test('guest cannot checkout', function () {
+    /** @var TestCase $this */
     $variant = makeApiTestVariant();
 
     $this->postJson(
@@ -73,6 +75,7 @@ test('guest cannot checkout', function () {
 });
 
 test('active owner cannot use cashier checkout', function () {
+    /** @var TestCase $this */
     $owner = makeApiTestUser('owner');
 
     Sanctum::actingAs($owner);
@@ -88,6 +91,7 @@ test('active owner cannot use cashier checkout', function () {
 });
 
 test('inactive cashier cannot checkout', function () {
+    /** @var TestCase $this */
     $cashier = makeApiTestUser('cashier', 'Inactive');
 
     Sanctum::actingAs($cashier);
@@ -103,6 +107,7 @@ test('inactive cashier cannot checkout', function () {
 });
 
 test('active cashier can checkout successfully', function () {
+    /** @var TestCase $this */
     $cashier = makeApiTestUser();
 
     Sanctum::actingAs($cashier);
@@ -123,6 +128,7 @@ test('active cashier can checkout successfully', function () {
 });
 
 test('duplicate checkout returns HTTP 200 without another stock deduction', function () {
+    /** @var TestCase $this */
     $cashier = makeApiTestUser();
 
     Sanctum::actingAs($cashier);
@@ -150,6 +156,7 @@ test('duplicate checkout returns HTTP 200 without another stock deduction', func
 });
 
 test('different payload with the same checkout key returns HTTP 409', function () {
+    /** @var TestCase $this */
     $cashier = makeApiTestUser();
 
     Sanctum::actingAs($cashier);
@@ -171,6 +178,7 @@ test('different payload with the same checkout key returns HTTP 409', function (
 });
 
 test('checkout rejects an invalid idempotency key', function () {
+    /** @var TestCase $this */
     $cashier = makeApiTestUser();
 
     Sanctum::actingAs($cashier);
@@ -188,6 +196,7 @@ test('checkout rejects an invalid idempotency key', function () {
 });
 
 test('checkout rejects duplicate product variants', function () {
+    /** @var TestCase $this */
     $cashier = makeApiTestUser();
 
     Sanctum::actingAs($cashier);
@@ -212,6 +221,7 @@ test('checkout rejects duplicate product variants', function () {
 });
 
 test('checkout rejects missing GCash reference number', function () {
+    /** @var TestCase $this */
     $cashier = makeApiTestUser();
 
     Sanctum::actingAs($cashier);

@@ -3,10 +3,15 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import {
     ArrowRight,
     Banknote,
+    BadgeCheck,
+    CalendarDays,
     ChevronLeft,
     ChevronRight,
+    CreditCard,
     MoreHorizontal,
+    PackageCheck,
     Plus,
+    ReceiptText,
     Search,
     ShoppingBag,
     UserRound,
@@ -244,9 +249,11 @@ export default function CashierSales() {
                             </h1>
 
                             <p className="text-sm text-gray-600">
-                                Start and manage your transaction here
+                                Start and manage today&apos;s transactions here
                             </p>
                         </div>
+
+                        <h2 className="mb-4 text-lg font-bold">Today&apos;s Transactions</h2>
 
                         {/* SEARCH AND FILTER */}
                         <div className="mb-6 flex flex-wrap gap-3">
@@ -391,20 +398,6 @@ export default function CashierSales() {
                                                     View Details
                                                     <ArrowRight className="size-4" />
                                                 </button>
-
-                                                <button
-                                                    type="button"
-                                                    aria-label={`View receipt ${sale.receipt_number}`}
-                                                    disabled={detailLoading}
-                                                    onClick={() =>
-                                                        void viewDetails(
-                                                            sale.id
-                                                        )
-                                                    }
-                                                    className="flex items-center justify-center rounded-md bg-[#D0D0D0] px-3 transition hover:bg-gray-300 disabled:opacity-50"
-                                                >
-                                                    <MoreHorizontal className="size-5" />
-                                                </button>
                                             </div>
                                         </article>
                                     );
@@ -429,7 +422,7 @@ export default function CashierSales() {
                         {!loading && !error && filtered.length === 0 && (
                             <p className="mt-4 text-sm text-gray-500">
                                 {sales.length === 0
-                                    ? 'No transactions yet. Click New Transaction to start.'
+                                    ? 'No transactions today. Click New Transaction to start.'
                                     : 'No matching transactions on this page.'}
                             </p>
                         )}
@@ -438,7 +431,7 @@ export default function CashierSales() {
                         {!loading && lastPage > 1 && (
                             <div className="mt-8 flex items-center justify-between gap-4">
                                 <p className="text-xs text-gray-500">
-                                    {total} total transactions
+                                    {total} transactions today
                                 </p>
 
                                 <div className="flex items-center gap-3">
@@ -479,7 +472,7 @@ export default function CashierSales() {
             {/* TRANSACTION DETAILS MODAL */}
             {selected && (
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                    className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/60 p-3 backdrop-blur-sm sm:p-6"
                     role="presentation"
                     onMouseDown={(e) => {
                         if (e.target === e.currentTarget) {
@@ -491,127 +484,134 @@ export default function CashierSales() {
                         role="dialog"
                         aria-modal="true"
                         aria-labelledby="receipt-heading"
-                        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl"
+                        className="my-auto flex max-h-[94vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white text-slate-900 shadow-2xl"
                     >
-                        <div className="mb-5 flex items-start justify-between gap-4">
-                            <div>
-                                <h2
-                                    id="receipt-heading"
-                                    className="text-xl font-bold"
-                                >
-                                    {selected.receipt_number}
-                                </h2>
-
-                                <p className="text-xs text-gray-500">
-                                    {saleDate(selected.created_at)}
-                                </p>
+                        <header className="flex items-start justify-between gap-4 border-b border-indigo-100 bg-gradient-to-r from-indigo-50 via-white to-sky-50 px-5 py-5 sm:px-7">
+                            <div className="flex min-w-0 items-center gap-4">
+                                <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm shadow-indigo-200">
+                                    <ReceiptText className="size-6" />
+                                </span>
+                                <div className="min-w-0">
+                                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-indigo-600">Transaction receipt</p>
+                                    <h2 id="receipt-heading" className="mt-1 truncate text-xl font-extrabold tracking-tight sm:text-2xl">
+                                        {selected.receipt_number}
+                                    </h2>
+                                    <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
+                                        <CalendarDays className="size-3.5" />{saleDate(selected.created_at)}
+                                    </p>
+                                </div>
                             </div>
-
                             <button
                                 type="button"
                                 onClick={() => setSelected(null)}
                                 aria-label="Close transaction details"
-                                className="rounded-lg p-2 hover:bg-gray-100"
+                                className="rounded-lg p-2 text-slate-500 transition hover:bg-white hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                             >
                                 <X className="size-5" />
                             </button>
-                        </div>
-
-                        <div className="space-y-3">
-                            {selected.items?.map((item) => (
-                                <div
-                                    key={item.id}
-                                    className="flex justify-between gap-4 border-b pb-3"
-                                >
-                                    <div>
-                                        <p className="text-sm font-semibold">
-                                            {item.product_name}
-                                        </p>
-
-                                        <p className="text-xs text-gray-500">
-                                            {item.sku} ·{' '}
-                                            {item.size ?? '—'} /{' '}
-                                            {item.color ?? '—'}
-                                        </p>
-
-                                        <p className="text-xs text-gray-500">
-                                            {item.quantity} ×{' '}
-                                            {peso(item.unit_price)}
-                                        </p>
+                        </header>
+                        <div className="min-h-0 overflow-y-auto p-5 sm:p-7">
+                            <div className="grid gap-5 lg:grid-cols-[minmax(0,1.3fr)_minmax(260px,0.7fr)]">
+                                <section className="min-w-0" aria-label="Purchased items">
+                                    <div className="mb-3 flex items-center justify-between gap-3">
+                                        <div>
+                                            <h3 className="text-sm font-extrabold">Items purchased</h3>
+                                            <p className="mt-0.5 text-xs text-slate-500">{selected.items?.length ?? 0} product line{selected.items?.length === 1 ? '' : 's'}</p>
+                                        </div>
+                                        <span className="flex size-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600"><PackageCheck className="size-5" /></span>
                                     </div>
+                                    <div className="space-y-2">
+                                        {selected.items?.length ? selected.items.map((item) => {
+                                            const sourceImage = item.product_variant?.product?.image;
+                                            const image = sourceImage
+                                                ? (sourceImage.startsWith('http') || sourceImage.startsWith('/')
+                                                    ? sourceImage
+                                                    : `/storage/${sourceImage}`)
+                                                : null;
 
-                                    <span className="text-sm font-semibold">
-                                        {peso(item.subtotal)}
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
-
-                        <div className="mt-5 space-y-2 text-sm">
-                            <div className="flex justify-between">
-                                <span>Subtotal</span>
-                                <span>{peso(selected.subtotal)}</span>
-                            </div>
-
-                            <div className="flex justify-between">
-                                <span>Discount</span>
-                                <span>{peso(selected.discount)}</span>
-                            </div>
-
-                            <div className="flex justify-between border-t pt-3 text-lg font-bold">
-                                <span>Total</span>
-                                <span>
-                                    {peso(selected.total_amount)}
-                                </span>
-                            </div>
-
-                            <div className="flex justify-between">
-                                <span>Payment</span>
-                                <span className="uppercase">
-                                    {selected.payment?.payment_method ?? '—'}
-                                </span>
-                            </div>
-
-                            {selected.payment && (
-                                <>
-                                    <div className="flex justify-between">
-                                        <span>Amount Received</span>
-                                        <span>
-                                            {peso(
-                                                selected.payment.amount_received
-                                            )}
-                                        </span>
+                                            return (
+                                                <article key={item.id} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 transition hover:border-indigo-200 hover:bg-slate-50/70 sm:gap-4">
+                                                    <div className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100">
+                                                        {image ? (
+                                                            <img src={image} alt={item.product_name} className="h-full w-full object-cover" />
+                                                        ) : (
+                                                            <ShoppingBag className="size-5 text-slate-400" />
+                                                        )}
+                                                    </div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="truncate text-sm font-bold text-slate-900" title={item.product_name}>{item.product_name}</p>
+                                                        <p className="mt-0.5 truncate font-mono text-[11px] text-slate-500">{item.sku}</p>
+                                                        <p className="mt-1 text-xs text-slate-500">{item.color ?? '—'} <span aria-hidden="true">/</span> {item.size ?? '—'}</p>
+                                                    </div>
+                                                    <div className="shrink-0 text-right">
+                                                        <p className="text-sm font-extrabold text-slate-900">{peso(item.subtotal)}</p>
+                                                        <p className="mt-1 text-xs text-slate-500">{item.quantity} × {peso(item.unit_price)}</p>
+                                                    </div>
+                                                </article>
+                                            );
+                                        }) : (
+                                            <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">No item details are available for this transaction.</p>
+                                        )}
                                     </div>
+                                </section>
 
-                                    <div className="flex justify-between">
-                                        <span>Change</span>
-                                        <span>
-                                            {peso(
-                                                selected.payment.change_amount
-                                            )}
-                                        </span>
-                                    </div>
+                                <aside className="space-y-4">
+                                    <section className="rounded-xl border border-slate-200 bg-slate-50 p-4" aria-label="Transaction summary">
+                                        <div className="mb-4 flex items-center justify-between gap-3">
+                                            <h3 className="text-sm font-extrabold">Sale summary</h3>
+                                            <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold capitalize ${selected.status.toLowerCase() === 'completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-700'}`}>
+                                                <BadgeCheck className="size-3.5" />{selected.status}
+                                            </span>
+                                        </div>
+                                        <div className="space-y-3 text-sm">
+                                            <div className="flex justify-between gap-3 text-slate-600"><span>Subtotal</span><span className="font-semibold text-slate-900">{peso(selected.subtotal)}</span></div>
+                                            <div className="flex justify-between gap-3 text-slate-600"><span>Discount</span><span className="font-semibold text-slate-900">{peso(selected.discount)}</span></div>
+                                            <div className="border-t border-dashed border-slate-300 pt-3">
+                                                <div className="flex items-end justify-between gap-3">
+                                                    <span className="font-bold text-slate-800">Total paid</span>
+                                                    <span className="text-xl font-black tracking-tight text-slate-950">{peso(selected.total_amount)}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </section>
 
-                                    {selected.payment.reference_number && (
-                                        <p className="break-all text-xs text-gray-500">
-                                            GCash Reference:{' '}
-                                            {
-                                                selected.payment
-                                                    .reference_number
-                                            }
-                                        </p>
-                                    )}
-                                </>
-                            )}
+                                    <section className="rounded-xl border border-slate-200 p-4" aria-label="Payment details">
+                                        <div className="mb-3 flex items-center gap-2">
+                                            <span className="flex size-8 items-center justify-center rounded-lg bg-sky-50 text-sky-700">
+                                                {selected.payment?.payment_method?.toLowerCase() === 'cash' ? <Banknote className="size-4" /> : <CreditCard className="size-4" />}
+                                            </span>
+                                            <div>
+                                                <h3 className="text-sm font-extrabold">Payment details</h3>
+                                                <p className="text-xs capitalize text-slate-500">{selected.payment?.payment_method ?? 'No payment record'}</p>
+                                            </div>
+                                        </div>
+                                        {selected.payment ? (
+                                            <div className="space-y-2.5 text-xs">
+                                                <div className="flex justify-between gap-3"><span className="text-slate-500">Amount received</span><span className="font-semibold text-slate-900">{peso(selected.payment.amount_received)}</span></div>
+                                                <div className="flex justify-between gap-3"><span className="text-slate-500">Change</span><span className="font-semibold text-slate-900">{peso(selected.payment.change_amount)}</span></div>
+                                                {selected.payment.reference_number && (
+                                                    <div className="border-t border-slate-100 pt-2.5">
+                                                        <p className="text-slate-500">GCash reference</p>
+                                                        <p className="mt-1 break-all font-mono font-semibold text-slate-800">{selected.payment.reference_number}</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <p className="text-xs text-slate-500">No payment details are available.</p>
+                                        )}
+                                    </section>
+                                </aside>
+                            </div>
                         </div>
-
-                        <button
-                            type="button"
-                            onClick={() => setSelected(null)}
-                            className="mt-6 w-full rounded-lg bg-[#1C3155] py-3 text-sm font-semibold text-white hover:bg-[#142540]"
-                        >
-                            Close Details
-                        </button>
+                        <footer className="flex justify-end border-t border-slate-200 bg-slate-50 px-5 py-4 sm:px-7">
+                            <button
+                                type="button"
+                                onClick={() => setSelected(null)}
+                                className="w-full rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:w-auto"
+                            >
+                                Close Details
+                            </button>
+                        </footer>
                     </section>
                 </div>
             )}

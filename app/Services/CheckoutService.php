@@ -2,13 +2,14 @@
 
 namespace App\Services;
 
-use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use App\Models\CheckoutRequest;
 use App\Models\InventoryTransaction;
 use App\Models\ProductVariant;
 use App\Models\Sale;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 class CheckoutService
 {
@@ -35,7 +36,7 @@ class CheckoutService
             $key = $data['idempotency_key'];
 
             $normalizedItems = collect($data['items'])
-                ->map(fn($item) => [
+                ->map(fn ($item) => [
                     'product_variant_id' => (int) $item['product_variant_id'],
                     'quantity' => (int) $item['quantity'],
                 ])
@@ -73,7 +74,7 @@ class CheckoutService
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            if (!hash_equals($checkoutRequest->request_hash, $requestHash)) {
+            if (! hash_equals($checkoutRequest->request_hash, $requestHash)) {
                 throw new ConflictHttpException(
                     'This checkout key has already been used with different transaction details.'
                 );
@@ -120,13 +121,13 @@ class CheckoutService
             foreach ($items as $variantId => $item) {
                 $variant = $variants->get($variantId);
 
-                if (!$variant || !$variant->product) {
+                if (! $variant || ! $variant->product) {
                     throw ValidationException::withMessages([
                         'items' => 'One or more products do not exist.',
                     ]);
                 }
 
-                if ($variant->product->status !== 'Active') {
+                if ($variant->product->status !== 'Active' || $variant->product->is_archived) {
                     throw ValidationException::withMessages([
                         'items' => 'An unavailable product was selected.',
                     ]);
@@ -171,8 +172,7 @@ class CheckoutService
             } else {
                 if ($receivedCents !== $totalCents) {
                     throw ValidationException::withMessages([
-                        'amount_received' =>
-                        'GCash amount must equal the sale total.',
+                        'amount_received' => 'GCash amount must equal the sale total.',
                     ]);
                 }
 
@@ -180,7 +180,7 @@ class CheckoutService
             }
 
             $sale = Sale::create([
-                'receipt_number' => 'TMP-' . \Illuminate\Support\Str::random(20),
+                'receipt_number' => 'TMP-'.Str::random(20),
                 'cashier_id' => $cashierId,
                 'subtotal' => $this->money($subtotalCents),
                 'discount' => '0.00',
@@ -189,7 +189,7 @@ class CheckoutService
             ]);
 
             $sale->update([
-                'receipt_number' => 'SALE-' .
+                'receipt_number' => 'SALE-'.
                     str_pad((string) $sale->id, 8, '0', STR_PAD_LEFT),
             ]);
 
@@ -222,7 +222,7 @@ class CheckoutService
                     'quantity' => $quantity,
                     'previous_stock' => $previousStock,
                     'new_stock' => $newStock,
-                    'remarks' => 'Sale ' . $sale->receipt_number,
+                    'remarks' => 'Sale '.$sale->receipt_number,
                 ]);
             }
 
@@ -231,8 +231,7 @@ class CheckoutService
                 'amount_received' => $this->money($receivedCents),
                 'amount_paid' => $this->money($totalCents),
                 'change_amount' => $this->money($changeCents),
-                'reference_number' =>
-                $data['payment_method'] === 'gcash'
+                'reference_number' => $data['payment_method'] === 'gcash'
                     ? $data['reference_number']
                     : null,
             ]);

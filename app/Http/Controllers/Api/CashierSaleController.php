@@ -13,12 +13,16 @@ class CashierSaleController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
+        $today = now()->startOfDay();
+
         $sales = Sale::with([
             'cashier:id,name',
             'payment',
             'items.productVariant.product',
         ])
             ->where('cashier_id', $request->user()->id)
+            ->where('created_at', '>=', $today)
+            ->where('created_at', '<', $today->copy()->addDay())
             ->latest()
             ->paginate(15);
 

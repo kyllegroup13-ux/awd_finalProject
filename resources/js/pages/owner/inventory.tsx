@@ -1,6 +1,6 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
-    ChevronLeft, ChevronRight, Package, Pencil, Search, Trash2, UserRound, X,
+    ChevronLeft, ChevronRight, Package, Pencil, Search, UserRound, X,
     Plus, Database, Info, CheckCircle2,
 } from 'lucide-react';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
@@ -25,9 +25,9 @@ type Mode = 'restock' | 'adjust';
 const peso = (amount: string | number) =>
     new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(Number(amount) || 0);
 const stockState = (v: Variant) => v.stock_quantity === 0 ? 'out' : v.stock_quantity <= v.reorder_level ? 'low' : 'in';
-const inputClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500';
+const inputClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-[#202023] outline-none focus:border-blue-500';
 const labelClass = 'mb-1.5 block text-sm font-semibold';
-const statusClass = (state: 'out' | 'low' | 'in') => state === 'out' ? 'bg-[#F87580] text-white' : state === 'low' ? 'bg-[#FFBF65] text-[#402908]' : 'bg-[#09D82A] text-white';
+const statusClass = (state: 'out' | 'low' | 'in') => state === 'out' ? 'bg-[#F87580] text-[#171717]' : state === 'low' ? 'bg-[#FFBF65] text-[#402908]' : 'bg-[#09D82A] text-[#171717]';
 
 function getCsrf() {
     return document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? '';
@@ -150,7 +150,7 @@ export default function OwnerInventory({ variants, categories, sizes, filters, c
                                         <td className="px-3 py-3 font-bold">{v.stock_quantity}</td>
                                         <td className="px-3 py-3"><span className={`inline-block whitespace-nowrap rounded px-2 py-1 text-[10px] font-semibold ${statusClass(st)}`}>{st === 'out' ? 'Out of Stock' : st === 'low' ? 'Low Stock' : 'In Stock'}</span></td>
                                         <td className="px-3 py-3 whitespace-nowrap">{new Date(v.updated_at).toLocaleDateString('en-PH', { month: '2-digit', day: '2-digit', year: 'numeric' })}</td>
-                                        <td className="px-3 py-3"><div className="flex gap-2"><button type="button" title={`Update stock for ${v.sku}`} aria-label={`Update stock for ${v.sku}`} onClick={() => openEditor(v)} className="rounded bg-[#4CAEE0] p-1.5 hover:bg-sky-400"><Pencil className="size-4" /></button><button type="button" title={`Set ${v.sku} stock to zero (record adjustment)`} aria-label={`Set ${v.sku} stock to zero`} onClick={() => openEditor(v, 'adjust', '0')} className="rounded bg-[#F77B82] p-1.5 hover:bg-red-400"><Trash2 className="size-4" /></button></div></td>
+                                        <td className="px-3 py-3"><div className="flex gap-2"><button type="button" title={`Update stock for ${v.sku}`} aria-label={`Update stock for ${v.sku}`} onClick={() => openEditor(v)} className="rounded bg-[#4CAEE0] p-1.5 hover:bg-sky-400"><Pencil className="size-4" /></button></div></td>
                                     </tr>;
                                 })}
                                 {variants.data.length === 0 && <tr><td colSpan={10} className="py-12 text-center text-gray-500">No inventory variants match these filters. Add variants from Product Management.</td></tr>}
@@ -164,7 +164,7 @@ export default function OwnerInventory({ variants, categories, sizes, filters, c
         </div>
 
         {selected && <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 p-3 sm:p-6" onMouseDown={e => { if (e.currentTarget === e.target) closeEditor(); }}>
-            <section role="dialog" aria-modal="true" aria-labelledby="inventory-modal-title" className="my-auto w-full max-w-[900px] overflow-hidden rounded-xl bg-white shadow-2xl">
+            <section role="dialog" aria-modal="true" aria-labelledby="inventory-modal-title" className="my-auto w-full max-w-[900px] overflow-hidden rounded-xl bg-white text-[#202023] shadow-2xl">
                 <div className="flex items-center justify-between border-b border-gray-300 px-6 py-5"><div><h2 id="inventory-modal-title" className="text-xl font-extrabold">Update Stock</h2><p className="text-xs text-gray-600">Add stock or set a corrected quantity for this specific variant</p></div><button type="button" disabled={saving} onClick={closeEditor} aria-label="Close" className="rounded p-2 hover:bg-gray-100"><X className="size-6" /></button></div>
                 <form onSubmit={submit}>
                     <div className="grid md:grid-cols-2">

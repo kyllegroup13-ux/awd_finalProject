@@ -6,6 +6,7 @@ import {
     Plus,
     Search,
     ShoppingBag,
+    CreditCard,
     Trash2,
     Wallet,
     ArrowLeft,
@@ -54,6 +55,7 @@ export default function CashierPOS() {
     const [products, setProducts] = useState<Product[]>([]);
     const [search, setSearch] = useState('');
     const [cart, setCart] = useState<CartItem[]>([]);
+    const [selectedVariantIds, setSelectedVariantIds] = useState<Record<number, number>>({});
     const [paymentMethod, setPaymentMethod] =
         useState<'cash' | 'gcash'>('cash');
     const [amountReceived, setAmountReceived] = useState('');
@@ -613,52 +615,139 @@ export default function CashierPOS() {
                             </div>
                             <div className="mb-4 flex flex-wrap gap-2">
                                 <span className="rounded-lg bg-[#D8D8D8] px-5 py-3 text-xs font-bold">All Items</span>
-                                <span className="self-center text-xs text-gray-500">Select a product variant to add it to the sale</span>
+                                <span className="self-center text-xs text-gray-500">Choose a size and color, then add the product to the sale</span>
                             </div>
 
                             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
-                                {filteredProducts.flatMap((product) =>
-                                    product.variants.map((variant) => {
-                                        const stock = variant.stock_quantity;
-                                        const cartQuantity = cart.find((item) => item.variantId === variant.id)?.quantity ?? 0;
-                                        const unavailable = stock <= 0 || cartQuantity >= stock || loading || hasPendingCheckout;
-                                        const image = product.image
-                                            ? (product.image.startsWith('http') || product.image.startsWith('/')
-                                                ? product.image
-                                                : `/storage/${product.image}`)
-                                            : null;
-                                        return (
-                                            <article key={variant.id} className="flex min-w-0 flex-col rounded-lg border border-[#D8D8D8] bg-white p-2 shadow-sm">
-                                                <div className="mb-2 flex aspect-[4/3] items-center justify-center overflow-hidden rounded-md bg-[#EEEEEE]">
-                                                    {image ? (
-                                                        <img src={image} alt={product.name} className="h-full w-full object-contain" loading="lazy" />
-                                                    ) : (
-                                                        <ShoppingBag className="size-10 text-gray-300" aria-hidden="true" />
-                                                    )}
-                                                </div>
-                                                <h2 className="truncate text-xs font-bold" title={product.name}>{product.name}</h2>
-                                                <p className="mt-0.5 text-xs font-extrabold">{money(Number(variant.price))}</p>
-                                                <p className={`mt-1 text-[11px] font-semibold ${stock > 0 ? 'text-green-600' : 'text-red-500'}`}>
-                                                    {stock > 0 ? `In Stock (${stock})` : 'Out of Stock'}
-                                                </p>
-                                                <div className="mt-auto flex flex-wrap items-center gap-1 pt-2">
-                                                    <span className="min-w-0 flex-1 truncate rounded border bg-[#F4F4F4] px-1.5 py-1.5 text-[10px] text-gray-600" title={`${variant.size ?? 'No size'} / ${variant.color ?? 'No color'} · ${variant.sku}`}>
-                                                        {variant.size || '—'} · {variant.color || '—'}
-                                                    </span>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => addToCart(product, variant)}
-                                                        disabled={unavailable}
-                                                        aria-label={`Add ${product.name}, ${variant.size ?? ''} ${variant.color ?? ''} to sale`}
-                                                        className="flex size-8 items-center justify-center rounded bg-[#D8D8D8] hover:bg-[#B9B9B9] disabled:cursor-not-allowed disabled:opacity-40"
+                                {filteredProducts.map((product) => {
+                                    const availableVariants = product.variants.filter(
+                                        (variant) => variant.stock_quantity > 0
+                                    );
+                                    const variant =
+                                        product.variants.find(
+                                            (item) =>
+                                                item.id === selectedVariantIds[product.id] &&
+                                                item.stock_quantity > 0
+                                        ) ??
+                                        availableVariants[0] ??
+                                        product.variants[0];
+
+                                    if (!variant) {
+                                        return null;
+                                    }
+
+                                    const sizes = [...new Set(
+                                        availableVariants.map((item) => item.size)
+                                    )];
+                                    const colorVariants = availableVariants.filter(
+                                        (item) => item.size === variant.size
+                                    );
+                                    const colors = [...new Set(
+                                        colorVariants.map((item) => item.color)
+                                    )];
+                                    const stock = variant.stock_quantity;
+                                    const cartQuantity = cart.find((item) => item.variantId === variant.id)?.quantity ?? 0;
+                                    const unavailable = stock <= 0 || cartQuantity >= stock || loading || hasPendingCheckout;
+                                    const image = product.image
+                                        ? (product.image.startsWith('http') || product.image.startsWith('/')
+                                            ? product.image
+                                            : `/storage/${product.image}`)
+                                        : null;
+
+                                    return (
+                                        <article key={product.id} className="flex min-w-0 flex-col rounded-lg border border-[#D8D8D8] bg-white p-2 shadow-sm">
+                                            <div className="mb-2 flex aspect-[4/3] items-center justify-center overflow-hidden rounded-md bg-[#EEEEEE]">
+                                                {image ? (
+                                                    <img src={image} alt={product.name} className="h-full w-full object-contain" loading="lazy" />
+                                                ) : (
+                                                    <ShoppingBag className="size-10 text-gray-300" aria-hidden="true" />
+                                                )}
+                                            </div>
+                                            <h2 className="truncate text-xs font-bold" title={product.name}>{product.name}</h2>
+                                            <p className="mt-0.5 text-xs font-extrabold">{money(Number(variant.price))}</p>
+                                            <p className={`mt-1 text-[11px] font-semibold ${stock > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                                {stock > 0 ? `In Stock (${stock})` : 'Out of Stock'}
+                                            </p>
+                                            <div className="mt-2 grid grid-cols-2 gap-2">
+                                                <label className="min-w-0 text-[10px] font-semibold text-gray-600">
+                                                    Size
+                                                    <select
+                                                        aria-label={`${product.name} size`}
+                                                        value={sizes.length > 0 ? variant.size ?? '' : ''}
+                                                        disabled={sizes.length === 0 || loading || hasPendingCheckout}
+                                                        onChange={(event) => {
+                                                            const candidates = availableVariants.filter(
+                                                                (item) => (item.size ?? '') === event.target.value
+                                                            );
+                                                            const nextVariant =
+                                                                candidates.find((item) => item.color === variant.color) ??
+                                                                candidates[0];
+
+                                                            if (nextVariant) {
+                                                                setSelectedVariantIds((current) => ({
+                                                                    ...current,
+                                                                    [product.id]: nextVariant.id,
+                                                                }));
+                                                            }
+                                                        }}
+                                                        className="mt-1 w-full min-w-0 rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-[#202020] disabled:bg-gray-100"
                                                     >
-                                                        <Plus className="size-4" />
-                                                    </button>
-                                                </div>
-                                            </article>
-                                        );
-                                    })
-                                )}
+                                                        {sizes.length === 0 ? (
+                                                            <option value="">No sizes in stock</option>
+                                                        ) : sizes.map((size) => (
+                                                            <option key={size ?? 'no-size'} value={size ?? ''}>
+                                                                {size || 'No size'}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </label>
+                                                <label className="min-w-0 text-[10px] font-semibold text-gray-600">
+                                                    Color
+                                                    <select
+                                                        aria-label={`${product.name} color`}
+                                                        value={colors.length > 0 ? variant.color ?? '' : ''}
+                                                        disabled={colors.length === 0 || loading || hasPendingCheckout}
+                                                        onChange={(event) => {
+                                                            const nextVariant = colorVariants.find(
+                                                                (item) => (item.color ?? '') === event.target.value
+                                                            );
+
+                                                            if (nextVariant) {
+                                                                setSelectedVariantIds((current) => ({
+                                                                    ...current,
+                                                                    [product.id]: nextVariant.id,
+                                                                }));
+                                                            }
+                                                        }}
+                                                        className="mt-1 w-full min-w-0 rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-[#202020] disabled:bg-gray-100"
+                                                    >
+                                                        {colors.length === 0 ? (
+                                                            <option value="">No colors in stock</option>
+                                                        ) : colors.map((color) => (
+                                                            <option key={color ?? 'no-color'} value={color ?? ''}>
+                                                                {color || 'No color'}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </label>
+                                            </div>
+                                            <div className="mt-auto flex items-center gap-1 pt-2">
+                                                <span className="min-w-0 flex-1 truncate text-[10px] text-gray-500" title={variant.sku}>
+                                                    SKU: {variant.sku}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => addToCart(product, variant)}
+                                                    disabled={unavailable}
+                                                    aria-label={`Add ${product.name}, ${variant.size ?? ''} ${variant.color ?? ''} to sale`}
+                                                    className="flex size-8 items-center justify-center rounded bg-[#D8D8D8] hover:bg-[#B9B9B9] disabled:cursor-not-allowed disabled:opacity-40"
+                                                >
+                                                    <Plus className="size-4" />
+                                                </button>
+                                            </div>
+                                        </article>
+                                    );
+                                })}
                             </div>
                             {products.length === 0 && (
                                 <p className="mt-5 rounded-lg border border-dashed border-gray-300 bg-white p-6 text-center text-sm text-gray-500">No products available. Products will appear here when added by the Owner.</p>
@@ -668,102 +757,128 @@ export default function CashierPOS() {
                             )}
                         </section>
 
-                        <aside className="min-w-0 rounded-lg bg-[#DADADA] p-3 sm:p-4">
-                            <div className="mb-3 flex items-center justify-between gap-3">
-                                <h2 className="text-base font-extrabold">Current Sale</h2>
+                        <aside className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-900/5 lg:sticky lg:top-5">
+                            <header className="flex items-center justify-between gap-3 bg-slate-900 px-5 py-5 text-white sm:px-6">
+                                <div className="flex min-w-0 items-center gap-3">
+                                    <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white/10 text-sky-300"><ShoppingBag className="size-5" /></span>
+                                    <div className="min-w-0">
+                                        <h2 className="text-lg font-extrabold tracking-tight">Current Sale</h2>
+                                        <p className="text-xs text-slate-300">{cart.length} {cart.length === 1 ? 'item' : 'items'} in your sale</p>
+                                    </div>
+                                </div>
                                 <button
                                     type="button"
                                     onClick={() => { setCart([]); setAmountReceived(''); setGcashReference(''); setError(''); }}
                                     disabled={loading || hasPendingCheckout || cart.length === 0}
-                                    className="rounded-md bg-[#FF787E] px-4 py-2 text-xs font-bold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
-                                >Delete</button>
-                            </div>
+                                    className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:border-red-300/40 hover:bg-red-500/15 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-40"
+                                ><Trash2 className="size-3.5" />Clear</button>
+                            </header>
 
-                            <div className="overflow-x-auto">
-                                <div className="min-w-[325px]">
-                                    <div className="grid grid-cols-[minmax(0,1.5fr)_75px_78px_86px_28px] gap-1 rounded-md bg-white px-2 py-3 text-[10px] font-bold">
-                                        <span>Item</span><span>Price</span><span>Qty</span><span>Subtotal</span><span />
+                            <div className="space-y-5 p-4 sm:p-5">
+                                <section aria-label="Sale items">
+                                    <div className="mb-3 flex items-center justify-between">
+                                        <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Order items</h3>
+                                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600">{cart.reduce((count, item) => count + item.quantity, 0)} units</span>
                                     </div>
-                                    <div className="max-h-[300px] space-y-2 overflow-y-auto py-3">
+                                    <div className="max-h-[340px] space-y-2 overflow-y-auto pr-1">
                                         {cart.length === 0 ? (
-                                            <p className="rounded-md bg-white/60 px-3 py-8 text-center text-xs text-gray-500">No items added yet</p>
-                                        ) : cart.map((item) => (
-                                            <div key={item.variantId} className="grid grid-cols-[minmax(0,1.5fr)_75px_78px_86px_28px] items-center gap-1 border-b border-gray-300 pb-2 text-[11px]">
-                                                <div className="min-w-0">
-                                                    <p className="truncate font-bold" title={item.name}>{item.name}</p>
-                                                    <p className="truncate text-[10px] text-gray-500">{item.color || '—'} / {item.size || '—'}</p>
-                                                </div>
-                                                <span className="text-[10px] font-semibold">{money(item.price)}</span>
-                                                <div className="inline-flex items-center justify-start gap-1">
-                                                    <button type="button" onClick={() => updateQuantity(item.variantId, -1)} disabled={loading || hasPendingCheckout} aria-label={`Decrease ${item.name} quantity`} className="flex size-5 items-center justify-center bg-white disabled:opacity-40"><Minus className="size-3" /></button>
-                                                    <span className="min-w-3 text-center font-bold">{item.quantity}</span>
-                                                    <button type="button" onClick={() => updateQuantity(item.variantId, 1)} disabled={loading || hasPendingCheckout || item.quantity >= item.stock} aria-label={`Increase ${item.name} quantity`} className="flex size-5 items-center justify-center bg-white disabled:opacity-40"><Plus className="size-3" /></button>
-                                                </div>
-                                                <span className="text-[10px] font-bold">{money(item.price * item.quantity)}</span>
-                                                <button type="button" onClick={() => removeFromCart(item.variantId)} disabled={loading || hasPendingCheckout} aria-label={`Remove ${item.name}`} className="flex size-6 items-center justify-center rounded bg-[#F87780] text-white disabled:opacity-40"><Trash2 className="size-3.5" /></button>
+                                            <div className="flex min-h-44 flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 px-5 text-center">
+                                                <span className="mb-3 flex size-12 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm"><ShoppingBag className="size-5" /></span>
+                                                <p className="text-sm font-bold text-slate-700">Your sale is empty</p>
+                                                <p className="mt-1 max-w-52 text-xs leading-5 text-slate-500">Choose a product and add it to start a transaction.</p>
                                             </div>
+                                        ) : cart.map((item) => (
+                                            <article key={item.variantId} className="rounded-xl border border-slate-200 bg-white p-3 transition hover:border-slate-300 hover:shadow-sm">
+                                                <div className="flex min-w-0 items-start justify-between gap-3">
+                                                    <div className="min-w-0">
+                                                        <p className="truncate text-sm font-bold text-slate-900" title={item.name}>{item.name}</p>
+                                                        <p className="mt-0.5 truncate text-xs text-slate-500">{item.color || '—'} <span aria-hidden="true">/</span> {item.size || '—'} <span aria-hidden="true">·</span> {item.sku}</p>
+                                                    </div>
+                                                    <button type="button" onClick={() => removeFromCart(item.variantId)} disabled={loading || hasPendingCheckout} aria-label={`Remove ${item.name}`} title={`Remove ${item.name}`} className="flex size-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"><Trash2 className="size-4" /></button>
+                                                </div>
+                                                <div className="mt-3 flex items-center justify-between gap-3">
+                                                    <div className="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-slate-50 p-1">
+                                                        <button type="button" onClick={() => updateQuantity(item.variantId, -1)} disabled={loading || hasPendingCheckout} aria-label={`Decrease ${item.name} quantity`} className="flex size-7 items-center justify-center rounded-md text-slate-600 transition hover:bg-white hover:text-slate-900 disabled:opacity-40"><Minus className="size-3.5" /></button>
+                                                        <span className="min-w-8 text-center text-xs font-bold text-slate-800">{item.quantity}</span>
+                                                        <button type="button" onClick={() => updateQuantity(item.variantId, 1)} disabled={loading || hasPendingCheckout || item.quantity >= item.stock} aria-label={`Increase ${item.name} quantity`} className="flex size-7 items-center justify-center rounded-md text-slate-600 transition hover:bg-white hover:text-slate-900 disabled:opacity-40"><Plus className="size-3.5" /></button>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="text-sm font-extrabold text-slate-900">{money(item.price * item.quantity)}</p>
+                                                        <p className="text-[11px] text-slate-500">{money(item.price)} each</p>
+                                                    </div>
+                                                </div>
+                                            </article>
                                         ))}
                                     </div>
-                                </div>
-                            </div>
+                                </section>
 
-                            <div className="mb-8 flex items-center justify-between rounded-md bg-[#80C6E8] px-4 py-3 font-extrabold">
-                                <span>Total</span><span>{money(subtotal)}</span>
-                            </div>
-
-                            <div className="mb-3 flex flex-wrap items-center gap-2">
-                                <span className="text-xs font-bold">Payment:</span>
-                                <div className="inline-flex overflow-hidden rounded-md bg-white p-1 text-xs">
-                                    <button type="button" onClick={() => { setPaymentMethod('cash'); setError(''); }} className={`rounded px-3 py-1.5 font-semibold ${paymentMethod === 'cash' ? 'bg-[#F7C65D]' : 'hover:bg-gray-100'}`}><Wallet className="mr-1 inline size-3" />Cash</button>
-                                    <button type="button" onClick={() => { setPaymentMethod('gcash'); setError(''); }} className={`rounded px-3 py-1.5 font-semibold ${paymentMethod === 'gcash' ? 'bg-[#80C6E8]' : 'hover:bg-gray-100'}`}>GCash</button>
-                                </div>
-                            </div>
-                            {paymentMethod === 'cash' ? (
-                                <div className="mb-3 grid grid-cols-2 gap-3">
-                                    <label className="block min-w-0 text-[11px] font-bold">
-                                        Amount Received
-                                        <div className="mt-1 flex h-11 overflow-hidden rounded-md bg-white">
-                                            <span className="flex items-center bg-[#F7C65D] px-2 text-xs font-bold">Php</span>
-                                            <input type="number" min="0" step="0.01" value={amountReceived} onChange={(e) => setAmountReceived(e.target.value)} placeholder="0.00" className="w-full min-w-0 px-2 text-sm outline-none" />
-                                        </div>
-                                    </label>
-                                    <div className="rounded-md bg-[#9EDC9C] px-3 py-2 text-[11px] font-bold">
-                                        Change
-                                        <div className="mt-1 text-sm">{money(change)}</div>
+                                <section className="rounded-xl bg-slate-50 p-4" aria-label="Sale total">
+                                    <div className="flex items-center justify-between text-sm text-slate-500">
+                                        <span>Subtotal</span><span>{money(subtotal)}</span>
                                     </div>
-                                </div>
-                            ) : (
-                                <label className="mb-3 block text-xs font-bold">
-                                    GCash Reference Number
-                                    <input value={gcashReference} onChange={(e) => setGcashReference(e.target.value)} placeholder="Enter verified reference" className="mt-1 h-11 w-full rounded-md bg-white px-3 text-sm outline-none" />
-                                    <span className="mt-1 block text-[10px] font-normal text-gray-600">Manually verify payment before checkout.</span>
-                                </label>
-                            )}
+                                    <div className="my-3 border-t border-dashed border-slate-300" />
+                                    <div className="flex items-end justify-between gap-3">
+                                        <span className="text-sm font-bold text-slate-800">Total due</span>
+                                        <span className="text-2xl font-black tracking-tight text-slate-950">{money(subtotal)}</span>
+                                    </div>
+                                </section>
 
-                            {error && <p role="alert" className="mb-3 rounded-md bg-red-50 p-3 text-xs text-red-700">{error}</p>}
-                            {success && (
-                                <div role="status" className="mb-3 rounded-md bg-green-50 p-3 text-xs text-green-800">
-                                    <p className="font-bold">{success}</p>
-                                    {lastReceipt && <p className="mt-1">Receipt: {lastReceipt}</p>}
-                                    <Link href="/cashier/sales" className="mt-2 inline-block font-bold underline">Back to Dashboard</Link>
-                                </div>
-                            )}
-                            {hasPendingCheckout && (
-                                <div className="mb-3 space-y-2 rounded-md border border-amber-400 bg-amber-50 p-3 text-xs">
-                                    <p className="font-bold">An earlier checkout needs confirmation.</p>
-                                    <p>Check Sales History before trying again. Do not collect payment twice.</p>
-                                    <button type="button" onClick={retryPendingCheckout} disabled={loading} className="block w-full rounded-md bg-amber-200 p-2 font-bold disabled:opacity-50">{loading ? 'Confirming...' : 'Retry Saved Checkout'}</button>
-                                    <Link href="/cashier/sales" className="block text-center underline">Check Sales History</Link>
-                                </div>
-                            )}
-                            <button
-                                type="button"
-                                onClick={completeSale}
-                                disabled={loading || hasPendingCheckout || cart.length === 0 || (paymentMethod === 'cash' && (!amountReceived || !Number.isFinite(Number(amountReceived)) || Number(amountReceived) < subtotal)) || (paymentMethod === 'gcash' && !gcashReference.trim())}
-                                className="w-full rounded-md bg-[#419FD0] px-4 py-3 text-sm font-bold text-white hover:bg-[#2989BE] disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                {loading ? 'Processing Transaction...' : 'Complete Transaction'}
-                            </button>
+                                <section aria-label="Payment details">
+                                    <div className="mb-2 flex items-center justify-between">
+                                        <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Payment method</h3>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <button type="button" aria-pressed={paymentMethod === 'cash'} onClick={() => { setPaymentMethod('cash'); setError(''); }} className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-3 text-sm font-bold transition ${paymentMethod === 'cash' ? 'border-amber-400 bg-amber-50 text-amber-900 ring-2 ring-amber-100' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}><Wallet className="size-4" />Cash</button>
+                                        <button type="button" aria-pressed={paymentMethod === 'gcash'} onClick={() => { setPaymentMethod('gcash'); setError(''); }} className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-3 text-sm font-bold transition ${paymentMethod === 'gcash' ? 'border-sky-400 bg-sky-50 text-sky-900 ring-2 ring-sky-100' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}><CreditCard className="size-4" />GCash</button>
+                                    </div>
+                                    {paymentMethod === 'cash' ? (
+                                        <div className="mt-3 grid grid-cols-2 gap-3">
+                                            <label className="block min-w-0 text-xs font-semibold text-slate-600">
+                                                Amount received
+                                                <div className="mt-1.5 flex h-11 overflow-hidden rounded-lg border border-slate-200 bg-white focus-within:border-sky-400 focus-within:ring-2 focus-within:ring-sky-100">
+                                                    <span className="flex items-center border-r border-slate-200 bg-slate-50 px-3 text-xs font-bold text-slate-500">₱</span>
+                                                    <input type="number" min="0" step="0.01" value={amountReceived} onChange={(e) => setAmountReceived(e.target.value)} placeholder="0.00" className="w-full min-w-0 bg-transparent px-3 text-sm font-semibold text-slate-900 outline-none" />
+                                                </div>
+                                            </label>
+                                            <div className="flex min-w-0 flex-col justify-center rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2">
+                                                <span className="text-xs font-semibold text-emerald-800">Change</span>
+                                                <span className="mt-1 truncate text-base font-extrabold text-emerald-950">{money(change)}</span>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <label className="mt-3 block text-xs font-semibold text-slate-600">
+                                            GCash reference number
+                                            <input value={gcashReference} onChange={(e) => setGcashReference(e.target.value)} placeholder="Enter verified reference" className="mt-1.5 h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-2 focus:ring-sky-100" />
+                                            <span className="mt-1.5 block text-[11px] font-normal text-slate-500">Manually verify payment before checkout.</span>
+                                        </label>
+                                    )}
+                                </section>
+
+                                {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs leading-5 text-red-700">{error}</p>}
+                                {success && (
+                                    <div role="status" className="rounded-lg border border-green-200 bg-green-50 p-3 text-xs text-green-800">
+                                        <p className="font-bold">{success}</p>
+                                        {lastReceipt && <p className="mt-1">Receipt: {lastReceipt}</p>}
+                                        <Link href="/cashier/sales" className="mt-2 inline-block font-bold underline">Back to Dashboard</Link>
+                                    </div>
+                                )}
+                                {hasPendingCheckout && (
+                                    <div className="space-y-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs leading-5 text-amber-950">
+                                        <p className="font-bold">An earlier checkout needs confirmation.</p>
+                                        <p>Check Sales History before trying again. Do not collect payment twice.</p>
+                                        <button type="button" onClick={retryPendingCheckout} disabled={loading} className="block w-full rounded-lg bg-amber-200 p-2.5 font-bold transition hover:bg-amber-300 disabled:opacity-50">{loading ? 'Confirming...' : 'Retry Saved Checkout'}</button>
+                                        <Link href="/cashier/sales" className="block text-center underline">Check Sales History</Link>
+                                    </div>
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={completeSale}
+                                    disabled={loading || hasPendingCheckout || cart.length === 0 || (paymentMethod === 'cash' && (!amountReceived || !Number.isFinite(Number(amountReceived)) || Number(amountReceived) < subtotal)) || (paymentMethod === 'gcash' && !gcashReference.trim())}
+                                    className="w-full rounded-xl bg-sky-600 px-4 py-3.5 text-sm font-extrabold text-white shadow-sm shadow-sky-200 transition hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
+                                >
+                                    {loading ? 'Processing Transaction...' : 'Complete Transaction'}
+                                </button>
+                            </div>
                         </aside>
                     </div>
                 </div>

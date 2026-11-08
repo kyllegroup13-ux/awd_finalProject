@@ -1,6 +1,6 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import {
-    ChevronLeft, ChevronRight, Eye, UserRound, X,
+    BadgeCheck, CalendarDays, ChevronLeft, ChevronRight, CreditCard, Eye, ReceiptText, UserRound, X,
 } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 
@@ -197,41 +197,95 @@ export default function OwnerSales({ sales, filters }: Props) {
             </div>
 
             {selected && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onMouseDown={(e) => {
+                <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/60 p-3 backdrop-blur-sm sm:p-6" onMouseDown={(e) => {
                     if (e.target === e.currentTarget) setSelected(null);
                 }}>
-                    <section role="dialog" aria-modal="true" aria-labelledby="sale-detail-title"
-                        className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
-                        <div className="mb-5 flex items-start justify-between gap-4">
-                            <div>
-                                <h2 id="sale-detail-title" className="text-xl font-bold">{selected.receipt_number}</h2>
-                                <p className="text-xs text-gray-500">{dateTime(selected.created_at)}</p>
-                                <p className="mt-1 text-xs text-gray-500">Cashier: {selected.cashier?.name ?? `#${selected.cashier_id}`}</p>
-                            </div>
-                            <button type="button" onClick={() => setSelected(null)} aria-label="Close details" className="rounded-lg p-2 hover:bg-gray-100"><X className="size-5" /></button>
-                        </div>
-                        <div className="space-y-3">
-                            {selected.items.map((item) => (
-                                <div key={item.id} className="flex justify-between gap-3 border-b pb-3 text-sm">
-                                    <div><p className="font-semibold">{item.product_name}</p><p className="text-xs text-gray-500">{item.sku} · {item.size ?? '—'} / {item.color ?? '—'} · {item.quantity} × {peso(item.unit_price)}</p></div>
-                                    <span className="shrink-0 font-semibold">{peso(item.subtotal)}</span>
+                    <section role="dialog" aria-modal="true" aria-labelledby="sale-detail-title" aria-describedby="sale-detail-date"
+                        className="my-auto flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white text-slate-900 shadow-2xl">
+                        <header className="flex items-start justify-between gap-4 border-b border-indigo-100 bg-gradient-to-r from-indigo-50 via-white to-violet-50 px-5 py-5 sm:px-7">
+                            <div className="flex min-w-0 items-start gap-4">
+                                <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm shadow-indigo-200">
+                                    <ReceiptText className="size-6" />
+                                </span>
+                                <div className="min-w-0">
+                                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-indigo-600">Sale record</p>
+                                    <h2 id="sale-detail-title" className="mt-1 truncate text-xl font-extrabold tracking-tight sm:text-2xl">{selected.receipt_number}</h2>
+                                    <p id="sale-detail-date" className="mt-1 flex items-center gap-1.5 text-sm text-slate-500">
+                                        <CalendarDays className="size-4 shrink-0" />{dateTime(selected.created_at)}
+                                    </p>
                                 </div>
-                            ))}
+                            </div>
+                            <div className="flex shrink-0 items-center gap-2">
+                                <span className="hidden items-center gap-1 rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-700 sm:inline-flex">
+                                    <BadgeCheck className="size-4" />Completed
+                                </span>
+                                <button type="button" onClick={() => setSelected(null)} aria-label="Close sale details" className="rounded-lg p-2 text-slate-500 transition hover:bg-white hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                    <X className="size-5" />
+                                </button>
+                            </div>
+                        </header>
+
+                        <div className="overflow-y-auto px-5 py-5 sm:px-7 sm:py-6">
+                            <div className="mb-6 grid gap-3 sm:grid-cols-2">
+                                <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+                                    <span className="flex size-10 items-center justify-center rounded-lg bg-white text-indigo-600 shadow-sm"><UserRound className="size-5" /></span>
+                                    <div className="min-w-0"><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Processed by</p><p className="truncate text-sm font-bold text-slate-900">{selected.cashier?.name ?? `Cashier #${selected.cashier_id}`}</p></div>
+                                </div>
+                                <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+                                    <span className="flex size-10 items-center justify-center rounded-lg bg-white text-indigo-600 shadow-sm"><CreditCard className="size-5" /></span>
+                                    <div className="min-w-0"><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Payment method</p><p className="truncate text-sm font-bold uppercase text-slate-900">{selected.payment?.payment_method ?? '—'}</p></div>
+                                </div>
+                            </div>
+
+                            <div className="mb-3 flex items-end justify-between gap-3">
+                                <div><h3 className="text-base font-extrabold">Items purchased</h3><p className="mt-0.5 text-xs text-slate-500">{selected.items.length} line item{selected.items.length === 1 ? '' : 's'} · {selected.items.reduce((sum, item) => sum + Number(item.quantity), 0)} unit{selected.items.reduce((sum, item) => sum + Number(item.quantity), 0) === 1 ? '' : 's'}</p></div>
+                                <span className="text-xs font-semibold text-slate-500">Amount</span>
+                            </div>
+                            <div className="overflow-hidden rounded-xl border border-slate-200">
+                                <div className="divide-y divide-slate-100">
+                                    {selected.items.map((item) => (
+                                        <div key={item.id} className="flex items-center justify-between gap-4 px-4 py-4 sm:px-5">
+                                            <div className="flex min-w-0 items-start gap-3">
+                                                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-xs font-extrabold text-indigo-700">{item.quantity}×</span>
+                                                <div className="min-w-0">
+                                                    <p className="truncate text-sm font-bold text-slate-900">{item.product_name}</p>
+                                                    <p className="mt-0.5 truncate text-xs text-slate-500">{item.sku} <span aria-hidden="true">·</span> {item.size ?? '—'} / {item.color ?? '—'}</p>
+                                                    <p className="mt-1 text-xs text-slate-500">{peso(item.unit_price)} each</p>
+                                                </div>
+                                            </div>
+                                            <span className="shrink-0 text-sm font-bold tabular-nums text-slate-900">{peso(item.subtotal)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="mt-5 grid gap-4 sm:grid-cols-[1fr_auto]">
+                                <div className="rounded-xl border border-slate-200 p-4">
+                                    <h3 className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-500">Payment details</h3>
+                                    {selected.payment ? (
+                                        <dl className="space-y-2.5 text-sm">
+                                            <div className="flex justify-between gap-4"><dt className="text-slate-500">Amount received</dt><dd className="font-semibold tabular-nums">{peso(selected.payment.amount_received)}</dd></div>
+                                            <div className="flex justify-between gap-4"><dt className="text-slate-500">Change</dt><dd className="font-semibold tabular-nums">{peso(selected.payment.change_amount)}</dd></div>
+                                            {selected.payment.reference_number && <div className="border-t border-slate-100 pt-2.5"><dt className="text-xs text-slate-500">GCash reference</dt><dd className="mt-1 break-all font-semibold text-slate-800">{selected.payment.reference_number}</dd></div>}
+                                        </dl>
+                                    ) : <p className="text-sm text-slate-500">No payment details available.</p>}
+                                </div>
+                                <div className="min-w-[220px] rounded-xl bg-slate-50 p-4 sm:text-right">
+                                    <h3 className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-500 sm:text-right">Sale summary</h3>
+                                    <dl className="space-y-2 text-sm">
+                                        <div className="flex justify-between gap-5 text-slate-600"><dt>Subtotal</dt><dd className="tabular-nums">{peso(selected.subtotal)}</dd></div>
+                                        <div className="flex justify-between gap-5 text-slate-600"><dt>Discount</dt><dd className="tabular-nums">−{peso(selected.discount)}</dd></div>
+                                        <div className="mt-3 flex items-end justify-between gap-5 border-t border-slate-200 pt-3 sm:justify-end sm:gap-8">
+                                            <dt className="font-bold text-slate-700">Total paid</dt><dd className="text-xl font-black tabular-nums text-indigo-700">{peso(selected.total_amount)}</dd>
+                                        </div>
+                                    </dl>
+                                </div>
+                            </div>
                         </div>
-                        <div className="mt-5 space-y-2 text-sm">
-                            <div className="flex justify-between"><span>Subtotal</span><span>{peso(selected.subtotal)}</span></div>
-                            <div className="flex justify-between"><span>Discount</span><span>{peso(selected.discount)}</span></div>
-                            <div className="flex justify-between border-t pt-3 text-lg font-bold"><span>Total</span><span>{peso(selected.total_amount)}</span></div>
-                            <div className="flex justify-between"><span>Payment</span><span className="uppercase">{selected.payment?.payment_method ?? '—'}</span></div>
-                            {selected.payment && (
-                                <>
-                                    <div className="flex justify-between"><span>Amount Received</span><span>{peso(selected.payment.amount_received)}</span></div>
-                                    <div className="flex justify-between"><span>Change</span><span>{peso(selected.payment.change_amount)}</span></div>
-                                    {selected.payment.reference_number && <p className="break-all text-xs text-gray-500">GCash Reference: {selected.payment.reference_number}</p>}
-                                </>
-                            )}
-                        </div>
-                        <button type="button" onClick={() => setSelected(null)} className="mt-6 w-full rounded-lg bg-[#605BFF] py-3 text-sm font-semibold text-white hover:bg-[#514AEA]">Close</button>
+
+                        <footer className="flex justify-end border-t border-slate-200 bg-slate-50 px-5 py-4 sm:px-7">
+                            <button type="button" onClick={() => setSelected(null)} className="rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-bold text-white transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">Done</button>
+                        </footer>
                     </section>
                 </div>
             )}

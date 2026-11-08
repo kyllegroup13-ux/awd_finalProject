@@ -13,6 +13,7 @@ test('all application migrations work in isolated SQLite', function () {
 
     expect(Schema::hasTable('categories'))->toBeTrue();
     expect(Schema::hasTable('products'))->toBeTrue();
+    expect(Schema::hasColumn('products', 'brand'))->toBeFalse();
     expect(Schema::hasTable('product_variants'))->toBeTrue();
     expect(Schema::hasTable('inventory_transactions'))->toBeTrue();
     expect(Schema::hasTable('sales'))->toBeTrue();

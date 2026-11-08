@@ -5,6 +5,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Sale;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 
@@ -14,7 +15,7 @@ function createSalesHistoryCashier(
 ): User {
     return User::create([
         'name' => 'History Test User',
-        'email' => Str::uuid() . '@example.test',
+        'email' => Str::uuid().'@example.test',
         'password' => 'test-password-123',
         'role' => $role,
         'status' => $status,
@@ -76,13 +77,36 @@ test('cashier can view their own sales history', function () {
 
     Sanctum::actingAs($cashier);
 
-    $this->getJson('/api/cashier/sales')
+    test()->getJson('/api/cashier/sales')
         ->assertOk()
         ->assertJsonPath('total', 1)
         ->assertJsonPath('data.0.id', $sale->id)
         ->assertJsonPath('data.0.cashier_id', $cashier->id)
         ->assertJsonCount(1, 'data.0.items')
         ->assertJsonPath('data.0.items.0.product_variant.product.image', 'https://example.com/shirt.jpg');
+});
+
+test('cashier sales cards include only transactions created today', function () {
+    $today = Carbon::parse('2026-11-08 10:00:00');
+    Carbon::setTestNow($today);
+
+    $cashier = createSalesHistoryCashier();
+    $variant = createSalesHistoryVariant();
+    $todaysSale = createSalesHistorySale($cashier, $variant);
+    $yesterdaysSale = createSalesHistorySale($cashier, $variant);
+
+    $yesterdaysSale->forceFill([
+        'created_at' => $today->copy()->subDay(),
+    ])->save();
+
+    Sanctum::actingAs($cashier);
+
+    test()->getJson('/api/cashier/sales')
+        ->assertOk()
+        ->assertJsonPath('total', 1)
+        ->assertJsonPath('data.0.id', $todaysSale->id);
+
+    Carbon::setTestNow();
 });
 
 test('cashier cannot see another cashiers sales in history', function () {
@@ -95,7 +119,7 @@ test('cashier cannot see another cashiers sales in history', function () {
 
     Sanctum::actingAs($cashierA);
 
-    $response = $this->getJson('/api/cashier/sales')
+    $response = test()->getJson('/api/cashier/sales')
         ->assertOk()
         ->assertJsonPath('total', 1);
 
@@ -112,7 +136,7 @@ test('cashier can view their own sale details', function () {
 
     Sanctum::actingAs($cashier);
 
-    $this->getJson("/api/cashier/sales/{$sale->id}")
+    test()->getJson("/api/cashier/sales/{$sale->id}")
         ->assertOk()
         ->assertJsonPath('id', $sale->id)
         ->assertJsonPath('cashier_id', $cashier->id)
@@ -129,12 +153,12 @@ test('cashier cannot view another cashiers sale details', function () {
 
     Sanctum::actingAs($cashierB);
 
-    $this->getJson("/api/cashier/sales/{$sale->id}")
+    test()->getJson("/api/cashier/sales/{$sale->id}")
         ->assertForbidden();
 });
 
 test('guest cannot access cashier sales history', function () {
-    $this->getJson('/api/cashier/sales')
+    test()->getJson('/api/cashier/sales')
         ->assertUnauthorized();
 });
 
@@ -143,7 +167,7 @@ test('owner cannot access cashier sales history', function () {
 
     Sanctum::actingAs($owner);
 
-    $this->getJson('/api/cashier/sales')
+    test()->getJson('/api/cashier/sales')
         ->assertForbidden();
 });
 
@@ -152,6 +176,6 @@ test('inactive cashier cannot access sales history', function () {
 
     Sanctum::actingAs($cashier);
 
-    $this->getJson('/api/cashier/sales')
+    test()->getJson('/api/cashier/sales')
         ->assertForbidden();
 });

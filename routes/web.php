@@ -7,6 +7,11 @@ use App\Http\Controllers\Owner\InventoryManagementController;
 use App\Http\Controllers\Owner\ProductManagementController;
 use App\Http\Controllers\Owner\SalesAnalyticsController;
 use App\Http\Controllers\Owner\SalesRecordController;
+use App\Models\Category;
+use App\Models\Product;
+use App\Models\ProductVariant;
+use App\Models\Sale;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -31,10 +36,10 @@ Route::get('/', function () {
 
 // Owner Dashboard
 
- // Owner Dashboard
+// Owner Dashboard
 Route::middleware(['auth', 'owner'])->group(function () {
     Route::get('/dashboard', function () {
-        $completedSales = \App\Models\Sale::query()
+        $completedSales = Sale::query()
             ->where('status', 'completed');
 
         $todaySales = (clone $completedSales)
@@ -47,12 +52,13 @@ Route::middleware(['auth', 'owner'])->group(function () {
             ->take(8)
             ->get();
 
-        $lowStockQuery = \App\Models\ProductVariant::query()
+        $lowStockQuery = ProductVariant::query()
+            ->whereHas('product', fn ($query) => $query->notArchived())
             ->whereColumn('stock_quantity', '<=', 'reorder_level');
 
         return Inertia::render('dashboard', [
             'todaySales' => $todaySales,
-            'totalProducts' => \App\Models\Product::count(),
+            'totalProducts' => Product::notArchived()->count(),
             'lowStockCount' => (clone $lowStockQuery)->count(),
             'recentSales' => $recentSales,
             'lowStockVariants' => (clone $lowStockQuery)
@@ -62,7 +68,6 @@ Route::middleware(['auth', 'owner'])->group(function () {
                 ->get(),
         ]);
     })->name('dashboard');
-
 
     Route::get(
         '/owner/cashiers',
@@ -93,50 +98,53 @@ Route::middleware(['auth', 'owner'])->group(function () {
         '/owner/sales-analytics/trends',
         [SalesAnalyticsController::class, 'trends']
     )->name('owner.sales-analytics.trends');
-    
+
     Route::get('/owner/reports', function () {
-    return Inertia::render('owner/reports');
+        return Inertia::render('owner/reports');
     })->name('owner.reports');
 
-    Route::get('/owner/manage/products', function (\Illuminate\Http\Request $request) {
-    $filters = [
-        'search' => (string) $request->query('search', ''),
-        'category' => (string) $request->query('category', ''),
-        'size' => (string) $request->query('size', ''),
-        'status' => (string) $request->query('status', ''),
-    ];
+    Route::get('/owner/manage/products', function (Request $request) {
+        $showArchived = $request->query('archived') === '1';
+        $filters = [
+            'search' => (string) $request->query('search', ''),
+            'category' => (string) $request->query('category', ''),
+            'size' => (string) $request->query('size', ''),
+            'status' => (string) $request->query('status', ''),
+        ];
 
-    $products = \App\Models\Product::query()
-        ->with(['category', 'variants'])
-        ->when($filters['search'], function ($query, $search) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('brand', 'like', "%{$search}%")
-                    ->orWhereHas('variants', function ($variants) use ($search) {
-                        $variants->where('sku', 'like', "%{$search}%");
-                    });
-            });
-        })
-        ->when($filters['category'], function ($query, $category) {
-            $query->where('category_id', $category);
-        })
-        ->when($filters['size'], function ($query, $size) {
-            $query->whereHas('variants', function ($variants) use ($size) {
-                $variants->where('size', $size);
-            });
-        })
-        ->when($filters['status'], function ($query, $status) {
-            $query->where('status', $status);
-        })
-        ->latest()
-        ->paginate(12)
-        ->withQueryString();
+        $products = Product::query()
+            ->where('is_archived', $showArchived)
+            ->with(['category', 'variants'])
+            ->when($filters['search'], function ($query, $search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                        ->orWhereHas('variants', function ($variants) use ($search) {
+                            $variants->where('sku', 'like', "%{$search}%");
+                        });
+                });
+            })
+            ->when($filters['category'], function ($query, $category) {
+                $query->where('category_id', $category);
+            })
+            ->when($filters['size'], function ($query, $size) {
+                $query->whereHas('variants', function ($variants) use ($size) {
+                    $variants->where('size', $size);
+                });
+            })
+            ->when($filters['status'], function ($query, $status) {
+                $query->where('status', $status);
+            })
+            ->latest()
+            ->paginate(12)
+            ->withQueryString();
 
-    return Inertia::render('owner/products', [
-        'products' => $products,
-        'categories' => \App\Models\Category::orderBy('name')->get(),
-        'filters' => $filters,
-    ]);
+        return Inertia::render('owner/products', [
+            'products' => $products,
+            'categories' => Category::orderBy('name')->get(),
+            'filters' => $filters,
+            'archived' => $showArchived,
+            'archivedCount' => Product::where('is_archived', true)->count(),
+        ]);
     })->name('owner.products.index');
 
     Route::post(
@@ -149,65 +157,76 @@ Route::middleware(['auth', 'owner'])->group(function () {
         [ProductManagementController::class, 'update']
     )->name('owner.products.update');
 
+    Route::delete(
+        '/owner/products/{product}',
+        [ProductManagementController::class, 'destroy']
+    )->name('owner.products.destroy');
+
+    Route::patch(
+        '/owner/products/{product}/restore',
+        [ProductManagementController::class, 'restore']
+    )->name('owner.products.restore');
+
     Route::patch(
         '/owner/product-variants/{variant}',
         [ProductManagementController::class, 'updateVariant']
     )->name('owner.product-variants.update');
 
-    Route::get('/owner/manage/inventory', function (\Illuminate\Http\Request $request) {
-    $filters = [
-        'search' => (string) $request->query('search', ''),
-        'category' => (string) $request->query('category', ''),
-        'size' => (string) $request->query('size', ''),
-        'status' => (string) $request->query('status', ''),
-    ];
+    Route::get('/owner/manage/inventory', function (Request $request) {
+        $filters = [
+            'search' => (string) $request->query('search', ''),
+            'category' => (string) $request->query('category', ''),
+            'size' => (string) $request->query('size', ''),
+            'status' => (string) $request->query('status', ''),
+        ];
 
-    $base = \App\Models\ProductVariant::query();
-    $counts = [
-        'total' => (clone $base)->count(),
-        'inStock' => (clone $base)
-            ->where('stock_quantity', '>', 0)
-            ->whereColumn('stock_quantity', '>', 'reorder_level')->count(),
-        'lowStock' => (clone $base)
-            ->where('stock_quantity', '>', 0)
-            ->whereColumn('stock_quantity', '<=', 'reorder_level')->count(),
-        'outOfStock' => (clone $base)->where('stock_quantity', 0)->count(),
-    ];
+        $base = ProductVariant::query()
+            ->whereHas('product', fn ($query) => $query->notArchived());
+        $counts = [
+            'total' => (clone $base)->count(),
+            'inStock' => (clone $base)
+                ->where('stock_quantity', '>', 0)
+                ->whereColumn('stock_quantity', '>', 'reorder_level')->count(),
+            'lowStock' => (clone $base)
+                ->where('stock_quantity', '>', 0)
+                ->whereColumn('stock_quantity', '<=', 'reorder_level')->count(),
+            'outOfStock' => (clone $base)->where('stock_quantity', 0)->count(),
+        ];
 
-    $variants = \App\Models\ProductVariant::query()
-        ->with(['product.category'])
-        ->when($filters['search'], function ($query, $value) {
-            $query->where(function ($q) use ($value) {
-                $q->where('sku', 'like', "%{$value}%")
-                  ->orWhereHas('product', function ($p) use ($value) {
-                      $p->where('name', 'like', "%{$value}%");
-                  });
-            });
-        })
-        ->when($filters['category'], function ($query, $id) {
-            $query->whereHas('product', fn ($p) => $p->where('category_id', $id));
-        })
-        ->when($filters['size'], fn ($query, $size) => $query->where('size', $size))
-        ->when($filters['status'] === 'in', function ($query) {
-            $query->where('stock_quantity', '>', 0)
-                ->whereColumn('stock_quantity', '>', 'reorder_level');
-        })
-        ->when($filters['status'] === 'low', function ($query) {
-            $query->where('stock_quantity', '>', 0)
-                ->whereColumn('stock_quantity', '<=', 'reorder_level');
-        })
-        ->when($filters['status'] === 'out', fn ($query) => $query->where('stock_quantity', 0))
-        ->latest('id')
-        ->paginate(12)
-        ->withQueryString();
+        $variants = (clone $base)
+            ->with(['product.category'])
+            ->when($filters['search'], function ($query, $value) {
+                $query->where(function ($q) use ($value) {
+                    $q->where('sku', 'like', "%{$value}%")
+                        ->orWhereHas('product', function ($p) use ($value) {
+                            $p->where('name', 'like', "%{$value}%");
+                        });
+                });
+            })
+            ->when($filters['category'], function ($query, $id) {
+                $query->whereHas('product', fn ($p) => $p->where('category_id', $id));
+            })
+            ->when($filters['size'], fn ($query, $size) => $query->where('size', $size))
+            ->when($filters['status'] === 'in', function ($query) {
+                $query->where('stock_quantity', '>', 0)
+                    ->whereColumn('stock_quantity', '>', 'reorder_level');
+            })
+            ->when($filters['status'] === 'low', function ($query) {
+                $query->where('stock_quantity', '>', 0)
+                    ->whereColumn('stock_quantity', '<=', 'reorder_level');
+            })
+            ->when($filters['status'] === 'out', fn ($query) => $query->where('stock_quantity', 0))
+            ->latest('id')
+            ->paginate(12)
+            ->withQueryString();
 
-    return Inertia::render('owner/inventory', [
-        'variants' => $variants,
-        'categories' => \App\Models\Category::orderBy('name')->get(['id', 'name']),
-        'sizes' => \App\Models\ProductVariant::query()->distinct()->orderBy('size')->pluck('size'),
-        'counts' => $counts,
-        'filters' => $filters,
-    ]);
+        return Inertia::render('owner/inventory', [
+            'variants' => $variants,
+            'categories' => Category::orderBy('name')->get(['id', 'name']),
+            'sizes' => (clone $base)->distinct()->orderBy('size')->pluck('size'),
+            'counts' => $counts,
+            'filters' => $filters,
+        ]);
     })->name('owner.inventory.index');
 
     Route::post(

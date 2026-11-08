@@ -10,6 +10,7 @@ class PosProductController extends Controller
     public function index()
     {
         $products = Product::query()
+            ->notArchived()
             ->where('status', 'Active')
             ->with('variants')
             ->orderBy('name')

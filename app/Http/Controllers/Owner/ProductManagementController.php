@@ -3,13 +3,12 @@
 namespace App\Http\Controllers\Owner;
 
 use App\Http\Controllers\Controller;
-use App\Models\Category;
 use App\Models\InventoryTransaction;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class ProductManagementController extends Controller
@@ -28,7 +27,6 @@ class ProductManagementController extends Controller
             ],
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'brand' => ['nullable', 'string', 'max:255'],
             'image' => $imageRules,
             'status' => ['sometimes', Rule::in(['Active', 'Inactive'])],
 
@@ -61,7 +59,7 @@ class ProductManagementController extends Controller
 
         if ($request->hasFile('image')) {
             $storedImage = $request->file('image')->store('products', 'public');
-            $imageUrl = $storedImage ? '/storage/' . $storedImage : null;
+            $imageUrl = $storedImage ? '/storage/'.$storedImage : null;
         } elseif (filled($request->input('image'))) {
             $imageUrl = $request->input('image');
         }
@@ -71,7 +69,6 @@ class ProductManagementController extends Controller
                 'category_id' => $validated['category_id'],
                 'name' => $validated['name'],
                 'description' => $validated['description'] ?? null,
-                'brand' => $validated['brand'] ?? null,
                 'image' => $imageUrl,
                 'status' => $validated['status'] ?? 'Active',
             ]);
@@ -108,7 +105,6 @@ class ProductManagementController extends Controller
         ], 201);
     }
 
-
     public function update(Request $request, Product $product): JsonResponse
     {
         $imageRules = $request->hasFile('image')
@@ -133,12 +129,6 @@ class ProductManagementController extends Controller
                 'nullable',
                 'string',
             ],
-            'brand' => [
-                'sometimes',
-                'nullable',
-                'string',
-                'max:255',
-            ],
             'image' => $imageRules,
             'status' => [
                 'sometimes',
@@ -149,7 +139,7 @@ class ProductManagementController extends Controller
 
         if ($request->hasFile('image')) {
             $storedImage = $request->file('image')->store('products', 'public');
-            $validated['image'] = $storedImage ? '/storage/' . $storedImage : $product->image;
+            $validated['image'] = $storedImage ? '/storage/'.$storedImage : $product->image;
         } elseif ($request->filled('image')) {
             $validated['image'] = $request->input('image');
         }
@@ -162,10 +152,27 @@ class ProductManagementController extends Controller
         ]);
     }
 
+    public function destroy(Product $product): JsonResponse
+    {
+        $product->update(['is_archived' => true]);
+
+        return response()->json([
+            'message' => 'Product archived successfully.',
+        ]);
+    }
+
+    public function restore(Product $product): JsonResponse
+    {
+        $product->update(['is_archived' => false]);
+
+        return response()->json([
+            'message' => 'Product restored successfully.',
+        ]);
+    }
 
     public function updateVariant(
         Request $request,
-        \App\Models\ProductVariant $variant
+        ProductVariant $variant
     ): JsonResponse {
         $validated = $request->validate([
             'sku' => [
@@ -211,7 +218,6 @@ class ProductManagementController extends Controller
             'variant' => $variant->fresh(),
         ]);
     }
-
 
     public function storeVariant(
         Request $request,

@@ -23,7 +23,7 @@ class SalesRecordController extends Controller
             ->when($filters['from'] ?? null, fn ($query, $date) => $query->whereDate('created_at', '>=', $date))
             ->when($filters['to'] ?? null, fn ($query, $date) => $query->whereDate('created_at', '<=', $date))
             ->latest()
-            ->paginate(15)
+            ->paginate(10)
             ->withQueryString();
 
         return Inertia::render('owner/sales', [
