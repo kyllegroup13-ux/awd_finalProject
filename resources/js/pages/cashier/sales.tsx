@@ -253,7 +253,12 @@ export default function CashierSales() {
                             </p>
                         </div>
 
-                        <h2 className="mb-4 text-lg font-bold">Today&apos;s Transactions</h2>
+                        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                            <h2 className="text-lg font-bold">Today&apos;s Transactions</h2>
+                            <Link href="/cashier/sales-history" className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">
+                                View full sales history
+                            </Link>
+                        </div>
 
                         {/* SEARCH AND FILTER */}
                         <div className="mb-6 flex flex-wrap gap-3">

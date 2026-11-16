@@ -109,6 +109,63 @@ test('cashier sales cards include only transactions created today', function () 
     Carbon::setTestNow();
 });
 
+test('cashier can request all sales history for their own account', function () {
+    $today = Carbon::parse('2026-11-08 10:00:00');
+    Carbon::setTestNow($today);
+
+    $cashier = createSalesHistoryCashier();
+    $variant = createSalesHistoryVariant();
+    $todaysSale = createSalesHistorySale($cashier, $variant);
+    $yesterdaysSale = createSalesHistorySale($cashier, $variant);
+
+    $yesterdaysSale->forceFill([
+        'created_at' => $today->copy()->subDay(),
+    ])->save();
+
+    Sanctum::actingAs($cashier);
+
+    test()->getJson('/api/cashier/sales?scope=all')
+        ->assertOk()
+        ->assertJsonPath('total', 2)
+        ->assertJsonPath('data.0.id', $todaysSale->id)
+        ->assertJsonPath('data.1.id', $yesterdaysSale->id);
+
+    Carbon::setTestNow();
+});
+
+test('cashier sales history is paginated with ten transactions per page', function () {
+    $cashier = createSalesHistoryCashier();
+    $variant = createSalesHistoryVariant();
+    $sales = collect(range(1, 11))
+        ->map(fn () => createSalesHistorySale($cashier, $variant));
+
+    Sanctum::actingAs($cashier);
+
+    $firstPage = test()->getJson('/api/cashier/sales?scope=all&page=1')
+        ->assertOk()
+        ->assertJsonPath('per_page', 10)
+        ->assertJsonPath('current_page', 1)
+        ->assertJsonPath('last_page', 2)
+        ->assertJsonCount(10, 'data');
+
+    $secondPage = test()->getJson('/api/cashier/sales?scope=all&page=2')
+        ->assertOk()
+        ->assertJsonPath('per_page', 10)
+        ->assertJsonPath('current_page', 2)
+        ->assertJsonCount(1, 'data');
+
+    $paginatedIds = collect($firstPage->json('data'))
+        ->merge($secondPage->json('data'))
+        ->pluck('id')
+        ->sort()
+        ->values()
+        ->all();
+
+    expect($paginatedIds)->toBe(
+        $sales->pluck('id')->sort()->values()->all()
+    );
+});
+
 test('cashier cannot see another cashiers sales in history', function () {
     $cashierA = createSalesHistoryCashier();
     $cashierB = createSalesHistoryCashier();

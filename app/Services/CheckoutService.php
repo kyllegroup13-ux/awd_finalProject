@@ -50,6 +50,9 @@ class CheckoutService
                 'amount_received' => $this->money(
                     $this->toCents((string) $data['amount_received'])
                 ),
+                'discount' => $this->money(
+                    $this->toCents((string) ($data['discount'] ?? '0.00'))
+                ),
                 'reference_number' => $data['payment_method'] === 'gcash'
                     ? ($data['reference_number'] ?? null)
                     : null,
@@ -154,8 +157,17 @@ class CheckoutService
                 ];
             }
 
-            // Discounts are reserved for a future feature.
-            $totalCents = $subtotalCents;
+            $discountCents = $this->toCents(
+                (string) ($data['discount'] ?? '0.00')
+            );
+
+            if ($discountCents > $subtotalCents) {
+                throw ValidationException::withMessages([
+                    'discount' => 'Discount cannot exceed the sale subtotal.',
+                ]);
+            }
+
+            $totalCents = $subtotalCents - $discountCents;
 
             $receivedCents = $this->toCents(
                 (string) $data['amount_received']
@@ -183,7 +195,7 @@ class CheckoutService
                 'receipt_number' => 'TMP-'.Str::random(20),
                 'cashier_id' => $cashierId,
                 'subtotal' => $this->money($subtotalCents),
-                'discount' => '0.00',
+                'discount' => $this->money($discountCents),
                 'total_amount' => $this->money($totalCents),
                 'status' => 'completed',
             ]);

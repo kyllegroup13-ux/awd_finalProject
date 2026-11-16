@@ -13,18 +13,24 @@ class CashierSaleController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $today = now()->startOfDay();
-
-        $sales = Sale::with([
+        $scope = $request->query('scope', 'today');
+        $query = Sale::with([
             'cashier:id,name',
             'payment',
             'items.productVariant.product',
         ])
-            ->where('cashier_id', $request->user()->id)
-            ->where('created_at', '>=', $today)
-            ->where('created_at', '<', $today->copy()->addDay())
+            ->where('cashier_id', $request->user()->id);
+
+        if ($scope !== 'all') {
+            $today = now()->startOfDay();
+            $query->where('created_at', '>=', $today)
+                ->where('created_at', '<', $today->copy()->addDay());
+        }
+
+        $sales = $query
             ->latest()
-            ->paginate(15);
+            ->orderByDesc('id')
+            ->paginate($scope === 'all' ? 10 : 15);
 
         return response()->json($sales);
     }
@@ -56,6 +62,14 @@ class CashierSaleController extends Controller
 
             'amount_received' => [
                 'required',
+                'numeric',
+                'min:0',
+                'decimal:0,2',
+            ],
+
+            'discount' => [
+                'sometimes',
+                'nullable',
                 'numeric',
                 'min:0',
                 'decimal:0,2',

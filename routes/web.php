@@ -49,7 +49,7 @@ Route::middleware(['auth', 'owner'])->group(function () {
         $recentSales = (clone $completedSales)
             ->with('cashier:id,name')
             ->latest()
-            ->take(8)
+            ->take(5)
             ->get();
 
         $lowStockQuery = ProductVariant::query()
@@ -98,6 +98,11 @@ Route::middleware(['auth', 'owner'])->group(function () {
         '/owner/sales-analytics/trends',
         [SalesAnalyticsController::class, 'trends']
     )->name('owner.sales-analytics.trends');
+
+    Route::get(
+        '/owner/sales-analytics/products',
+        [SalesAnalyticsController::class, 'products']
+    )->name('owner.sales-analytics.products');
 
     Route::get('/owner/reports', function () {
         return Inertia::render('owner/reports');
@@ -217,7 +222,7 @@ Route::middleware(['auth', 'owner'])->group(function () {
             })
             ->when($filters['status'] === 'out', fn ($query) => $query->where('stock_quantity', 0))
             ->latest('id')
-            ->paginate(12)
+            ->paginate(10)
             ->withQueryString();
 
         return Inertia::render('owner/inventory', [
@@ -274,6 +279,10 @@ Route::middleware(['auth', 'cashier'])->group(function () {
     Route::get('/cashier/sales', function () {
         return Inertia::render('cashier/sales');
     })->name('cashier.sales');
+
+    Route::get('/cashier/sales-history', function () {
+        return Inertia::render('cashier/sales-history');
+    })->name('cashier.sales-history');
 });
 
 // Authentication and account settings

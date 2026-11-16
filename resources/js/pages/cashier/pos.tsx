@@ -1,6 +1,8 @@
 
 import { Head, Link } from '@inertiajs/react';
 import { useMemo, useState, useEffect, useRef } from 'react';
+
+import { CashierSidebar } from '@/components/cashier-sidebar';
 import {
     Minus,
     Plus,
@@ -47,6 +49,7 @@ type CheckoutPayload = {
     }[];
     payment_method: 'cash' | 'gcash';
     amount_received: string;
+    discount: string;
     reference_number: string | null;
     idempotency_key: string;
 };
@@ -59,6 +62,7 @@ export default function CashierPOS() {
     const [paymentMethod, setPaymentMethod] =
         useState<'cash' | 'gcash'>('cash');
     const [amountReceived, setAmountReceived] = useState('');
+    const [bargainedPrice, setBargainedPrice] = useState('');
     const [gcashReference, setGcashReference] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -149,9 +153,29 @@ export default function CashierPOS() {
         [cart]
     );
 
+    const discountAmount = useMemo(() => {
+        if (!bargainedPrice.trim()) {
+            return 0;
+        }
+
+        const finalPrice = Number(bargainedPrice);
+
+        if (
+            !Number.isFinite(finalPrice) ||
+            finalPrice < 0 ||
+            finalPrice > subtotal
+        ) {
+            return 0;
+        }
+
+        return Math.max(0, subtotal - finalPrice);
+    }, [bargainedPrice, subtotal]);
+
+    const totalDue = Math.max(0, subtotal - discountAmount);
+
     const change = Math.max(
         0,
-        Number(amountReceived || 0) - subtotal
+        Number(amountReceived || 0) - totalDue
     );
 
     const filteredProducts = products.filter((product) =>
@@ -233,17 +257,22 @@ export default function CashierPOS() {
         setError('');
         setSuccess('');
 
-        const total = subtotal.toFixed(2);
+        const total = totalDue.toFixed(2);
 
         if (paymentMethod === 'cash') {
             if (
                 !amountReceived.trim() ||
                 !Number.isFinite(Number(amountReceived)) ||
-                Number(amountReceived) < subtotal
+                Number(amountReceived) < totalDue
             ) {
                 setError('Cash received must cover the total amount.');
                 return;
             }
+        }
+
+        if (bargainedPrice && (Number(bargainedPrice) < 0 || Number(bargainedPrice) > subtotal)) {
+            setError('The bargained price must be between ₱0.00 and the sale subtotal.');
+            return;
         }
 
         if (paymentMethod === 'gcash' && !gcashReference.trim()) {
@@ -282,6 +311,7 @@ export default function CashierPOS() {
                 paymentMethod === 'cash'
                     ? Number(amountReceived).toFixed(2)
                     : total,
+            discount: discountAmount.toFixed(2),
             reference_number:
                 paymentMethod === 'gcash'
                     ? gcashReference.trim()
@@ -385,6 +415,7 @@ export default function CashierPOS() {
 
             setCart([]);
             setAmountReceived('');
+            setBargainedPrice('');
             setGcashReference('');
 
             try {
@@ -541,6 +572,7 @@ export default function CashierPOS() {
 
             setCart([]);
             setAmountReceived('');
+            setBargainedPrice('');
             setGcashReference('');
 
             // Refresh stock after confirming the sale.
@@ -591,18 +623,21 @@ export default function CashierPOS() {
     return (
         <>
             <Head title="New Transaction | M3 Dry Goods" />
-            <div className="min-h-screen bg-[#F5F5F5] px-4 py-6 text-[#202020] sm:px-7 lg:px-9">
-                <div className="mx-auto max-w-[1500px]">
-                    <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
-                        <Link href="/cashier/sales" className="inline-flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-blue-600">
-                            <ArrowLeft className="size-4" /> Dashboard
-                        </Link>
-                        <h1 className="text-lg font-extrabold">New Transaction</h1>
-                        <span className="text-xs text-gray-500">M3 Dry Goods · Cashier POS</span>
-                    </header>
+            <div className="min-h-screen bg-[#F5F5F5] text-[#202020] md:flex">
+                <CashierSidebar />
 
-                    <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(370px,1fr)]">
-                        <section className="min-w-0">
+                <div className="min-w-0 flex-1 px-4 py-6 sm:px-7 lg:px-9">
+                    <div className="mx-auto max-w-[1500px]">
+                        <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
+                            <Link href="/cashier/sales" className="inline-flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-blue-600">
+                                <ArrowLeft className="size-4" /> Dashboard
+                            </Link>
+                            <h1 className="text-lg font-extrabold">New Transaction</h1>
+                            <span className="text-xs text-gray-500">M3 Dry Goods · Cashier POS</span>
+                        </header>
+
+                        <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(370px,1fr)]">
+                            <section className="min-w-0">
                             <div className="relative mb-4">
                                 <Search className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-gray-400" />
                                 <input
@@ -755,9 +790,9 @@ export default function CashierPOS() {
                             {products.length > 0 && filteredProducts.length === 0 && (
                                 <p className="mt-5 text-center text-sm text-gray-500">No matching products.</p>
                             )}
-                        </section>
+                            </section>
 
-                        <aside className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-900/5 lg:sticky lg:top-5">
+                            <aside className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-900/5 lg:sticky lg:top-5">
                             <header className="flex items-center justify-between gap-3 bg-slate-900 px-5 py-5 text-white sm:px-6">
                                 <div className="flex min-w-0 items-center gap-3">
                                     <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white/10 text-sky-300"><ShoppingBag className="size-5" /></span>
@@ -768,7 +803,7 @@ export default function CashierPOS() {
                                 </div>
                                 <button
                                     type="button"
-                                    onClick={() => { setCart([]); setAmountReceived(''); setGcashReference(''); setError(''); }}
+                                    onClick={() => { setCart([]); setAmountReceived(''); setBargainedPrice(''); setGcashReference(''); setError(''); }}
                                     disabled={loading || hasPendingCheckout || cart.length === 0}
                                     className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:border-red-300/40 hover:bg-red-500/15 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-40"
                                 ><Trash2 className="size-3.5" />Clear</button>
@@ -816,12 +851,33 @@ export default function CashierPOS() {
                                     <div className="flex items-center justify-between text-sm text-slate-500">
                                         <span>Subtotal</span><span>{money(subtotal)}</span>
                                     </div>
+                                    <div className="mt-2 flex items-center justify-between text-sm text-slate-500">
+                                        <span>Discount</span><span>-{money(discountAmount)}</span>
+                                    </div>
                                     <div className="my-3 border-t border-dashed border-slate-300" />
                                     <div className="flex items-end justify-between gap-3">
                                         <span className="text-sm font-bold text-slate-800">Total due</span>
-                                        <span className="text-2xl font-black tracking-tight text-slate-950">{money(subtotal)}</span>
+                                        <span className="text-2xl font-black tracking-tight text-slate-950">{money(totalDue)}</span>
                                     </div>
                                 </section>
+
+                                <label className="block text-xs font-semibold text-slate-600">
+                                    Bargained / discounted price
+                                    <div className="mt-1.5 flex h-11 overflow-hidden rounded-lg border border-slate-200 bg-white focus-within:border-sky-400 focus-within:ring-2 focus-within:ring-sky-100">
+                                        <span className="flex items-center border-r border-slate-200 bg-slate-50 px-3 text-xs font-bold text-slate-500">₱</span>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            max={subtotal.toFixed(2)}
+                                            step="0.01"
+                                            value={bargainedPrice}
+                                            onChange={(e) => setBargainedPrice(e.target.value)}
+                                            placeholder={money(subtotal)}
+                                            className="w-full min-w-0 bg-transparent px-3 text-sm font-semibold text-slate-900 outline-none"
+                                        />
+                                    </div>
+                                    <span className="mt-1.5 block text-[11px] font-normal text-slate-500">Optional. Enter the lower amount the customer agreed to pay.</span>
+                                </label>
 
                                 <section aria-label="Payment details">
                                     <div className="mb-2 flex items-center justify-between">
@@ -867,19 +923,20 @@ export default function CashierPOS() {
                                         <p className="font-bold">An earlier checkout needs confirmation.</p>
                                         <p>Check Sales History before trying again. Do not collect payment twice.</p>
                                         <button type="button" onClick={retryPendingCheckout} disabled={loading} className="block w-full rounded-lg bg-amber-200 p-2.5 font-bold transition hover:bg-amber-300 disabled:opacity-50">{loading ? 'Confirming...' : 'Retry Saved Checkout'}</button>
-                                        <Link href="/cashier/sales" className="block text-center underline">Check Sales History</Link>
+                                        <Link href="/cashier/sales-history" className="block text-center underline">Check Sales History</Link>
                                     </div>
                                 )}
                                 <button
                                     type="button"
                                     onClick={completeSale}
-                                    disabled={loading || hasPendingCheckout || cart.length === 0 || (paymentMethod === 'cash' && (!amountReceived || !Number.isFinite(Number(amountReceived)) || Number(amountReceived) < subtotal)) || (paymentMethod === 'gcash' && !gcashReference.trim())}
+                                    disabled={loading || hasPendingCheckout || cart.length === 0 || (paymentMethod === 'cash' && (!amountReceived || !Number.isFinite(Number(amountReceived)) || Number(amountReceived) < totalDue)) || (paymentMethod === 'gcash' && !gcashReference.trim()) || (!!bargainedPrice && (Number(bargainedPrice) < 0 || Number(bargainedPrice) > subtotal))}
                                     className="w-full rounded-xl bg-sky-600 px-4 py-3.5 text-sm font-extrabold text-white shadow-sm shadow-sky-200 transition hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
                                 >
                                     {loading ? 'Processing Transaction...' : 'Complete Transaction'}
                                 </button>
                             </div>
-                        </aside>
+                            </aside>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -22,10 +22,14 @@ type RegisterForm = {
     role: 'cashier' | 'owner';
 };
 
+type RegisterProps = {
+    ownerAvailable: boolean;
+};
+
 const inputClass =
     'h-11 w-full rounded-lg border border-slate-300 bg-white pl-10 pr-10 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#1C3155] focus:ring-2 focus:ring-[#1C3155]/10';
 
-export default function Register() {
+export default function Register({ ownerAvailable }: RegisterProps) {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -280,7 +284,9 @@ export default function Register() {
                                     className="h-11 w-full appearance-none rounded-lg border border-slate-300 bg-white px-3 pr-10 text-sm text-slate-700 outline-none transition focus:border-[#1C3155] focus:ring-2 focus:ring-[#1C3155]/10"
                                 >
                                     <option value="cashier">Cashier</option>
-                                    <option value="owner">Owner</option>
+                                    {ownerAvailable && (
+                                        <option value="owner">Owner</option>
+                                    )}
                                 </select>
 
                                 <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-slate-500" />

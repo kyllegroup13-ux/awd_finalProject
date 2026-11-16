@@ -127,6 +127,28 @@ test('active cashier can checkout successfully', function () {
     expect($variant->fresh()->stock_quantity)->toBe(8);
 });
 
+test('cashier can apply a bargained discount to the final sale total', function () {
+    /** @var TestCase $this */
+    $cashier = makeApiTestUser();
+
+    Sanctum::actingAs($cashier);
+
+    $variant = makeApiTestVariant();
+
+    $payload = makeApiCheckoutPayload($variant->id);
+    $payload['amount_received'] = '350.00';
+    $payload['discount'] = '50.00';
+
+    $response = $this->postJson('/api/cashier/checkout', $payload);
+
+    $response->assertCreated()
+        ->assertJsonPath('sale.total_amount', '350.00')
+        ->assertJsonPath('sale.discount', '50.00');
+
+    expect(Sale::count())->toBe(1);
+    expect($variant->fresh()->stock_quantity)->toBe(8);
+});
+
 test('duplicate checkout returns HTTP 200 without another stock deduction', function () {
     /** @var TestCase $this */
     $cashier = makeApiTestUser();
