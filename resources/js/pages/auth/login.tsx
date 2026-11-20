@@ -34,7 +34,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
     }
 
     return (
-        <M3AuthLayout mode="login" title="Sign In" description="">
+        <M3AuthLayout mode="login" title="Sign In" description="" showIcon={false}>
             <Head title="Sign In | M3 Dry Goods" />
 
             <div className="space-y-5">

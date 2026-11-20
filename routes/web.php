@@ -114,7 +114,6 @@ Route::middleware(['auth', 'owner'])->group(function () {
             'search' => (string) $request->query('search', ''),
             'category' => (string) $request->query('category', ''),
             'size' => (string) $request->query('size', ''),
-            'status' => (string) $request->query('status', ''),
         ];
 
         $products = Product::query()
@@ -135,9 +134,6 @@ Route::middleware(['auth', 'owner'])->group(function () {
                 $query->whereHas('variants', function ($variants) use ($size) {
                     $variants->where('size', $size);
                 });
-            })
-            ->when($filters['status'], function ($query, $status) {
-                $query->where('status', $status);
             })
             ->latest()
             ->paginate(12)

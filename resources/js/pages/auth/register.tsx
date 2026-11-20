@@ -59,6 +59,7 @@ export default function Register({ ownerAvailable }: RegisterProps) {
             mode="register"
             title="Register"
             description=""
+            showIcon={false}
         >
             <Head title="Register | M3 Dry Goods" />
 

@@ -51,8 +51,18 @@ const inputClass =
 const statusClass = (state: 'out' | 'low' | 'in') =>
     state === 'out' ? 'bg-red-50 text-red-700' : state === 'low' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700';
 
-function getCsrf() {
-    return document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? '';
+function getCsrf(): string {
+    const token = document.querySelector<HTMLMetaElement>(
+        'meta[name="csrf-token"]'
+    )?.content;
+
+    if (!token) {
+        throw new Error(
+            'CSRF token is missing. Please refresh the page and try again.'
+        );
+    }
+
+    return token;
 }
 async function mutateStock(url: string, method: 'POST' | 'PATCH', payload: unknown) {
     const response = await fetch(url, {

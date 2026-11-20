@@ -33,7 +33,7 @@ type Product = {
     variants: Variant[];
 };
 type Pages = { data: Product[]; current_page: number; last_page: number; total: number };
-type Filters = { search: string; category: string; size: string; status: string };
+type Filters = { search: string; category: string; size: string };
 type Props = {
     products: Pages;
     categories: Category[];
@@ -635,7 +635,7 @@ export default function OwnerProducts({ products, categories, filters, archived,
                                     e.preventDefault();
                                     navigate({ search });
                                 }}
-                                className="grid gap-3 border-b border-gray-100 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-5"
+                                className="grid gap-3 border-b border-gray-100 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-4"
                             >
                                 <div className="relative xl:col-span-2">
                                     <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-400" />
@@ -672,16 +672,6 @@ export default function OwnerProducts({ products, categories, filters, archived,
                                             {s}
                                         </option>
                                     ))}
-                                </select>
-                                <select
-                                    aria-label="Status"
-                                    value={filters.status}
-                                    onChange={(e) => navigate({ status: e.target.value })}
-                                    className={`${input} rounded-xl border-gray-200 bg-gray-50 py-3 focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10`}
-                                >
-                                    <option value="">All Status</option>
-                                    <option value="Active">Active</option>
-                                    <option value="Inactive">Inactive</option>
                                 </select>
                             </form>
 
@@ -1249,24 +1239,6 @@ export default function OwnerProducts({ products, categories, filters, archived,
                                     </div>
                                     <div className="space-y-4 px-6 py-6 sm:px-7">
                                         <h3 className="text-lg font-extrabold">Product Settings</h3>
-                                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                            <div>
-                                                <label htmlFor="new-status" className={label}>
-                                                    Status
-                                                </label>
-                                                <select
-                                                    id="new-status"
-                                                    className={input}
-                                                    value={productForm.status}
-                                                    onChange={(e) =>
-                                                        setProductForm((v) => ({ ...v, status: e.target.value as 'Active' | 'Inactive' }))
-                                                    }
-                                                >
-                                                    <option value="Active">Active</option>
-                                                    <option value="Inactive">Inactive</option>
-                                                </select>
-                                            </div>
-                                        </div>
                                         <p className="rounded-lg bg-blue-50 p-3 text-xs leading-5 text-blue-900">
                                             Add each size/color combination separately. Each variant gets its own SKU, price, stock quantity, and
                                             reorder level.
@@ -1385,7 +1357,7 @@ export default function OwnerProducts({ products, categories, filters, archived,
                                             onChange={(e) => setProductForm((s) => ({ ...s, name: e.target.value }))}
                                         />
                                     </div>
-                                    <div className="grid gap-4 sm:grid-cols-2">
+                                    <div>
                                         <div>
                                             <label htmlFor="edit-product-category" className={label}>
                                                 Category *
@@ -1403,20 +1375,6 @@ export default function OwnerProducts({ products, categories, filters, archived,
                                                         {c.name}
                                                     </option>
                                                 ))}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label htmlFor="edit-product-status" className={label}>
-                                                Status
-                                            </label>
-                                            <select
-                                                id="edit-product-status"
-                                                className={input}
-                                                value={productForm.status}
-                                                onChange={(e) => setProductForm((s) => ({ ...s, status: e.target.value as 'Active' | 'Inactive' }))}
-                                            >
-                                                <option value="Active">Active</option>
-                                                <option value="Inactive">Inactive</option>
                                             </select>
                                         </div>
                                     </div>

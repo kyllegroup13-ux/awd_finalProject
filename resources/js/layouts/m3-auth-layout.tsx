@@ -8,6 +8,7 @@ type M3AuthLayoutProps = {
     title: string;
     description: string;
     mode: 'login' | 'register';
+    showIcon?: boolean;
 };
 
 export default function M3AuthLayout({
@@ -15,6 +16,7 @@ export default function M3AuthLayout({
     title,
     description,
     mode,
+    showIcon = true,
 }: M3AuthLayoutProps) {
     const isLogin = mode === 'login';
 
@@ -28,9 +30,11 @@ export default function M3AuthLayout({
                 }`}
             >
                 <div className="mb-8 flex flex-col items-center text-center">
-                    <div className="mb-1 flex size-14 items-center justify-center rounded-lg bg-[#DEDEDE] p-2">
-                        <AppLogoIcon className="size-11 text-white" />
-                    </div>
+                    {showIcon && (
+                        <div className="mb-1 flex size-14 items-center justify-center rounded-lg bg-[#DEDEDE] p-2">
+                            <AppLogoIcon className="size-11 text-white" />
+                        </div>
+                    )}
 
                     <h1 className="text-[23px] font-bold leading-tight tracking-tight">
                         M3 Dry Goods
