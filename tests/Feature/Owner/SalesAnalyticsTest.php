@@ -220,3 +220,77 @@ test('product sales analytics requires a valid date range', function () {
         ->assertUnprocessable()
         ->assertJsonValidationErrors('to');
 });
+
+test('owners can see profit for a date range', function () {
+    $owner = User::factory()->create(['role' => 'owner']);
+    $cashier = User::factory()->create(['role' => 'cashier']);
+    $category = Category::create(['name' => 'Profit report category']);
+    $product = Product::create([
+        'category_id' => $category->id,
+        'name' => 'Profit Shirt',
+        'status' => 'Active',
+    ]);
+    $variant = ProductVariant::create([
+        'product_id' => $product->id,
+        'sku' => 'PROFIT-SHIRT',
+        'size' => 'M',
+        'color' => 'Blue',
+        'price' => '1000.00',
+        'stock_quantity' => 20,
+        'reorder_level' => 5,
+    ]);
+
+    $inRange = Sale::create([
+        'receipt_number' => 'PROFIT-001',
+        'cashier_id' => $cashier->id,
+        'subtotal' => '1000.00',
+        'discount' => '0.00',
+        'total_amount' => '1000.00',
+        'status' => 'completed',
+    ]);
+    $inRange->forceFill(['created_at' => Carbon::parse('2026-11-10 12:00:00')])->save();
+    SaleItem::create([
+        'sale_id' => $inRange->id,
+        'product_variant_id' => $variant->id,
+        'product_name' => $product->name,
+        'sku' => $variant->sku,
+        'size' => $variant->size,
+        'color' => $variant->color,
+        'quantity' => 2,
+        'unit_price' => '500.00',
+        'unit_cost' => '300.00',
+        'subtotal' => '1000.00',
+    ]);
+
+    $outsideRange = Sale::create([
+        'receipt_number' => 'PROFIT-002',
+        'cashier_id' => $cashier->id,
+        'subtotal' => '1000.00',
+        'discount' => '0.00',
+        'total_amount' => '1000.00',
+        'status' => 'completed',
+    ]);
+    $outsideRange->forceFill(['created_at' => Carbon::parse('2026-11-12 12:00:00')])->save();
+    SaleItem::create([
+        'sale_id' => $outsideRange->id,
+        'product_variant_id' => $variant->id,
+        'product_name' => $product->name,
+        'sku' => $variant->sku,
+        'size' => $variant->size,
+        'color' => $variant->color,
+        'quantity' => 2,
+        'unit_price' => '500.00',
+        'unit_cost' => '100.00',
+        'subtotal' => '1000.00',
+    ]);
+
+    actingAs($owner)
+        ->getJson(route('owner.sales-analytics.summary', [
+            'from' => '2026-11-10',
+            'to' => '2026-11-10',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('total_profit', '400.00')
+        ->assertJsonPath('eligible_sales_count', 1)
+        ->assertJsonPath('total_completed_sales', 1);
+});

@@ -24,6 +24,11 @@ type ProductAnalyticsResponse = {
     best_selling_product: ProductStat | null;
     least_selling_product: ProductStat | null;
 };
+type SummaryResponse = {
+    total_profit: number | string;
+    eligible_sales_count: number;
+    total_completed_sales: number;
+};
 type PageProps = { auth?: { user?: { name: string } | null } };
 
 const money = (value: number) => new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(value);
@@ -200,6 +205,12 @@ export default function OwnerReports() {
     const [productStats, setProductStats] = useState<ProductAnalyticsResponse | null>(null);
     const [productLoading, setProductLoading] = useState(true);
     const [productError, setProductError] = useState('');
+    const [profitSummary, setProfitSummary] = useState<SummaryResponse>({
+        total_profit: 0,
+        eligible_sales_count: 0,
+        total_completed_sales: 0,
+    });
+    const [profitError, setProfitError] = useState('');
     const [filterError, setFilterError] = useState('');
     const [reloadKey, setReloadKey] = useState(0);
 
@@ -261,6 +272,30 @@ export default function OwnerReports() {
             }
         }
         void loadProductStats();
+        return () => controller.abort();
+    }, [range, reloadKey]);
+
+    useEffect(() => {
+        const controller = new AbortController();
+        async function loadProfitSummary() {
+            setProfitError('');
+            try {
+                const params = new URLSearchParams({ from: range.from, to: range.to });
+                const response = await fetch(`/owner/sales-analytics/summary?${params.toString()}`, {
+                    credentials: 'same-origin',
+                    headers: { Accept: 'application/json' },
+                    signal: controller.signal,
+                });
+                if (!response.ok) throw new Error(`Unable to load profit summary (${response.status}).`);
+                const result = (await response.json()) as SummaryResponse;
+                if (!controller.signal.aborted) setProfitSummary(result);
+            } catch (caught) {
+                if (!controller.signal.aborted) {
+                    setProfitError(caught instanceof Error ? caught.message : 'Unable to load profit summary.');
+                }
+            }
+        }
+        void loadProfitSummary();
         return () => controller.abort();
     }, [range, reloadKey]);
 
@@ -411,7 +446,7 @@ export default function OwnerReports() {
                             </div>
                         )}
 
-                        <section className="grid gap-4 sm:grid-cols-3">
+                        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                             {[
                                 {
                                     label: 'Total revenue',
@@ -433,6 +468,15 @@ export default function OwnerReports() {
                                     icon: TrendingUp,
                                     style: 'bg-blue-50 text-blue-600',
                                     note: 'Revenue per transaction',
+                                },
+                                {
+                                    label: 'Estimated Gross Profit',
+                                    value: money(Number(profitSummary.total_profit) || 0),
+                                    icon: Wallet,
+                                    style: 'bg-emerald-50 text-emerald-600',
+                                    note: profitError
+                                        ? profitError
+                                        : `${profitSummary.eligible_sales_count} of ${profitSummary.total_completed_sales} completed sales have recorded costs. Based on estimated purchase costs.`,
                                 },
                             ].map((card) => {
                                 const Icon = card.icon;

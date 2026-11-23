@@ -17,11 +17,13 @@ class SaleItem extends Model
         'quantity',
         'unit_price',
         'subtotal',
+        'unit_cost',
     ];
 
     protected $casts = [
         'quantity' => 'integer',
         'unit_price' => 'decimal:2',
+        'unit_cost' => 'decimal:2',
         'subtotal' => 'decimal:2',
     ];
 

@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class ProductVariant extends Model
 {
-
     protected $fillable = [
 
         'product_id',
@@ -15,7 +14,9 @@ class ProductVariant extends Model
         'color',
         'price',
         'stock_quantity',
-        'reorder_level'
+        'reorder_level',
+        'cost_price',
+        'unit_cost',
 
     ];
 
@@ -23,8 +24,9 @@ class ProductVariant extends Model
         'price' => 'decimal:2',
         'stock_quantity' => 'integer',
         'reorder_level' => 'integer',
+        'cost_price' => 'decimal:2',
+        'unit_cost' => 'decimal:2',
     ];
-
 
     public function product()
     {

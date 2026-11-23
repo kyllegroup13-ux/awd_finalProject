@@ -41,6 +41,13 @@ class ProductManagementController extends Controller
             'variants.*.size' => ['required', 'string', 'max:255'],
             'variants.*.color' => ['required', 'string', 'max:255'],
             'variants.*.price' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
+            'variants.*.cost_price' => [
+                'required',
+                'numeric',
+                'min:0',
+                'max:99999999.99',
+                'decimal:0,2',
+            ],
             'variants.*.stock_quantity' => [
                 'required',
                 'integer',
@@ -209,6 +216,14 @@ class ProductManagementController extends Controller
                 'min:0',
                 'max:2147483647',
             ],
+            'cost_price' => [
+                'sometimes',
+                'required',
+                'numeric',
+                'min:0',
+                'max:99999999.99',
+                'decimal:0,2',
+            ],
         ]);
 
         $variant->update($validated);
@@ -250,6 +265,12 @@ class ProductManagementController extends Controller
                 'min:0',
                 'max:2147483647',
             ],
+            'cost_price' => [
+                'required',
+                'numeric',
+                'min:0',
+                'decimal:0,2',
+            ],
         ]);
 
         $result = DB::transaction(function () use (
@@ -262,6 +283,7 @@ class ProductManagementController extends Controller
                 'size' => $validated['size'],
                 'color' => $validated['color'],
                 'price' => $validated['price'],
+                'cost_price' => $validated['cost_price'],
                 'stock_quantity' => $validated['stock_quantity'],
                 'reorder_level' => $validated['reorder_level'] ?? 5,
             ]);

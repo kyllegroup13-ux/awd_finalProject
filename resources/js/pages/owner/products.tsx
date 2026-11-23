@@ -21,7 +21,7 @@ import { useRef, useState, type ChangeEvent, type Dispatch, type DragEvent, type
 import { OwnerSidebar } from '@/components/owner-sidebar';
 
 type Category = { id: number; name: string };
-type Variant = { id: number; sku: string; size: string; color: string; price: string | number; stock_quantity: number; reorder_level: number };
+type Variant = { id: number; sku: string; size: string; color: string; price: string | number; cost_price: string | number | null; stock_quantity: number; reorder_level: number };
 type Product = {
     id: number;
     name: string;
@@ -42,15 +42,15 @@ type Props = {
     archivedCount: number;
     auth?: { user?: { name: string } };
 };
-type VariantInput = { sku: string; size: string; color: string; price: string; stock_quantity: string; reorder_level: string };
-type NewProductVariant = { sku: string; size: string; color: string; price: number; stock_quantity: number; reorder_level: number };
-type NewProductVariantInput = { size: string; color: string; price: string; stock_quantity: string; reorder_level: string };
+type VariantInput = { sku: string; size: string; color: string; price: string; cost_price: string; stock_quantity: string; reorder_level: string };
+type NewProductVariant = { sku: string; size: string; color: string; price: number; cost_price: number; stock_quantity: number; reorder_level: number };
+type NewProductVariantInput = { size: string; color: string; price: string; cost_price: string; stock_quantity: string; reorder_level: string };
 type ProductInput = { name: string; category_id: string; description: string; image: string; status: 'Active' | 'Inactive' };
 
 const php = (amount: number | string) => new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(Number(amount));
 const blankProduct = (): ProductInput => ({ name: '', category_id: '', description: '', image: '', status: 'Active' });
-const blankVariant = (): VariantInput => ({ sku: '', size: '', color: '', price: '', stock_quantity: '0', reorder_level: '5' });
-const blankNewProductVariant = (): NewProductVariantInput => ({ size: '', color: '', price: '', stock_quantity: '0', reorder_level: '5' });
+const blankVariant = (): VariantInput => ({ sku: '', size: '', color: '', price: '', cost_price: '', stock_quantity: '0', reorder_level: '5' });
+const blankNewProductVariant = (): NewProductVariantInput => ({ size: '', color: '', price: '', cost_price: '', stock_quantity: '0', reorder_level: '5' });
 const SIZE_OPTIONS = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', '28', '30', '32', '34', '36', '38', '40', '42', '44', '46'];
 const COLOR_OPTIONS = [
     { name: 'Pink', hex: '#FA8189' },
@@ -203,13 +203,14 @@ export default function OwnerProducts({ products, categories, filters, archived,
         setVariantForm(
             variant
                 ? {
-                      sku: variant.sku,
-                      size: variant.size,
-                      color: variant.color,
-                      price: String(variant.price),
-                      stock_quantity: String(variant.stock_quantity),
-                      reorder_level: String(variant.reorder_level),
-                  }
+                    sku: variant.sku,
+                    size: variant.size,
+                    color: variant.color,
+                    price: String(variant.price),
+                    cost_price: variant.cost_price == null ? '' : String(variant.cost_price),
+                    stock_quantity: String(variant.stock_quantity),
+                    reorder_level: String(variant.reorder_level),
+                }
                 : blankVariant(),
         );
         setDialog('variant');
@@ -240,6 +241,7 @@ export default function OwnerProducts({ products, categories, filters, archived,
                         formData.append(`variants[${index}][size]`, variant.size);
                         formData.append(`variants[${index}][color]`, variant.color);
                         formData.append(`variants[${index}][price]`, String(variant.price));
+                        formData.append(`variants[${index}][cost_price]`, String(variant.cost_price));
                         formData.append(`variants[${index}][stock_quantity]`, String(variant.stock_quantity));
                         formData.append(`variants[${index}][reorder_level]`, String(variant.reorder_level));
                     });
@@ -319,6 +321,7 @@ export default function OwnerProducts({ products, categories, filters, archived,
                     size: variantForm.size,
                     color: variantForm.color,
                     price: Number(variantForm.price),
+                    cost_price: Number(variantForm.cost_price),
                     reorder_level: Number(variantForm.reorder_level),
                 });
             } else {
@@ -326,6 +329,7 @@ export default function OwnerProducts({ products, categories, filters, archived,
                     ...variantForm,
                     sku: generateVariantSku(productSkuPrefix(selected), variantForm.size, variantForm.color),
                     price: Number(variantForm.price),
+                    cost_price: Number(variantForm.cost_price),
                     stock_quantity: Number(variantForm.stock_quantity),
                     reorder_level: Number(variantForm.reorder_level),
                 });
@@ -391,11 +395,12 @@ export default function OwnerProducts({ products, categories, filters, archived,
     }
 
     function addCreateVariant() {
-        const { size, color, price, stock_quantity, reorder_level } = createVariantInput;
+        const { size, color, price, cost_price, stock_quantity, reorder_level } = createVariantInput;
         const skuPrefix = skuPart(variantForm.sku);
         const normalizedSize = skuPart(size);
         const normalizedColor = skuPart(color);
         const numericPrice = Number(price);
+        const numericCostPrice = Number(cost_price);
         const numericStock = Number(stock_quantity);
         const numericReorderLevel = Number(reorder_level);
 
@@ -409,6 +414,10 @@ export default function OwnerProducts({ products, categories, filters, archived,
         }
         if (!price.trim() || !Number.isFinite(numericPrice) || numericPrice < 0 || numericPrice > 99999999.99) {
             setError('Enter a valid price for this variant.');
+            return;
+        }
+        if (!cost_price.trim() || !Number.isFinite(numericCostPrice) || numericCostPrice < 0 || numericCostPrice > 99999999.99) {
+            setError('Enter a valid purchase cost for this variant.');
             return;
         }
         if (!stock_quantity.trim() || !Number.isSafeInteger(numericStock) || numericStock < 0 || numericStock > 2147483647) {
@@ -439,6 +448,7 @@ export default function OwnerProducts({ products, categories, filters, archived,
                 size,
                 color,
                 price: numericPrice,
+                cost_price: numericCostPrice,
                 stock_quantity: numericStock,
                 reorder_level: numericReorderLevel,
             },
@@ -1085,7 +1095,7 @@ export default function OwnerProducts({ products, categories, filters, archived,
                                         <div className="grid grid-cols-2 gap-3">
                                             <div>
                                                 <label htmlFor="new-variant-price" className={label}>
-                                                    Price (PHP)
+                                                    Selling Price (PHP)
                                                 </label>
                                                 <input
                                                     id="new-variant-price"
@@ -1097,6 +1107,24 @@ export default function OwnerProducts({ products, categories, filters, archived,
                                                     value={createVariantInput.price}
                                                     onChange={(event) =>
                                                         setCreateVariantInput((current) => ({ ...current, price: event.target.value }))
+                                                    }
+                                                />
+                                            </div>
+                                            <div>
+                                                <label htmlFor="new-variant-cost-price" className={label}>
+                                                    Purchase Cost (PHP) *
+                                                </label>
+                                                <input
+                                                    id="new-variant-cost-price"
+                                                    required
+                                                    type="number"
+                                                    min="0"
+                                                    max="99999999.99"
+                                                    step="0.01"
+                                                    className={input}
+                                                    value={createVariantInput.cost_price}
+                                                    onChange={(event) =>
+                                                        setCreateVariantInput((current) => ({ ...current, cost_price: event.target.value }))
                                                     }
                                                 />
                                             </div>
@@ -1157,7 +1185,7 @@ export default function OwnerProducts({ products, categories, filters, archived,
                                                                 {variant.color} / {variant.size} · {variant.sku}
                                                             </p>
                                                             <p className="mt-1 text-gray-500">
-                                                                {php(variant.price)} · Stock: {variant.stock_quantity} · Reorder at:{' '}
+                                                                Selling: {php(variant.price)} · Cost: {php(variant.cost_price)} · Stock: {variant.stock_quantity} · Reorder at:{' '}
                                                                 {variant.reorder_level}
                                                             </p>
                                                         </div>
@@ -1650,7 +1678,8 @@ export default function OwnerProducts({ products, categories, filters, archived,
                                                     </div>
                                                     <div className="flex items-center gap-4 sm:gap-6">
                                                         <div className="text-right">
-                                                            <p className="text-sm font-extrabold text-slate-900">{php(v.price)}</p>
+                                                            <p className="text-sm font-extrabold text-slate-900">Selling: {php(v.price)}</p>
+                                                            <p className="text-xs text-slate-500">Purchase cost: {v.cost_price == null ? 'Not set' : php(v.cost_price)}</p>
                                                             <p className="text-xs text-slate-500">
                                                                 Stock {v.stock_quantity} <span aria-hidden="true">·</span> Reorder {v.reorder_level}
                                                             </p>
@@ -1798,7 +1827,7 @@ function VariantFields({
                 <input required className={input} value={form.color} onChange={(e) => field('color')(e.target.value)} placeholder="Black" />
             </div>
             <div>
-                <label className={label}>Price (PHP) *</label>
+                <label className={label}>Selling Price (PHP) *</label>
                 <input
                     required
                     type="number"
@@ -1808,6 +1837,19 @@ function VariantFields({
                     className={input}
                     value={form.price}
                     onChange={(e) => field('price')(e.target.value)}
+                />
+            </div>
+            <div>
+                <label className={label}>Purchase Cost (PHP) *</label>
+                <input
+                    required
+                    type="number"
+                    min="0"
+                    max="99999999.99"
+                    step="0.01"
+                    className={input}
+                    value={form.cost_price}
+                    onChange={(e) => field('cost_price')(e.target.value)}
                 />
             </div>
             {allowStock && (

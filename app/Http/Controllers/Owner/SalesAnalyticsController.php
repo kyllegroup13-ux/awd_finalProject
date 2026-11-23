@@ -53,19 +53,51 @@ class SalesAnalyticsController extends Controller
         ]);
     }
 
-    public function summary(): JsonResponse
+    public function summary(Request $request): JsonResponse
     {
+        $validated = $request->validate([
+            'from' => ['nullable', 'date_format:Y-m-d'],
+            'to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
+        ]);
+
         $completedSales = Sale::query()
             ->where('status', 'completed');
+
+        if (! empty($validated['from'])) {
+            $completedSales->whereDate('created_at', '>=', $validated['from']);
+        }
+        if (! empty($validated['to'])) {
+            $completedSales->whereDate('created_at', '<=', $validated['to']);
+        }
 
         $totalTransactions = (clone $completedSales)->count();
 
         $totalRevenue = (clone $completedSales)
             ->sum('total_amount');
 
+        $eligibleSales = (clone $completedSales)
+            ->whereHas('items')
+            ->whereDoesntHave('items', function ($query) {
+                $query->whereNull('unit_cost');
+            });
+
+        $profitRevenue = (clone $eligibleSales)->sum('total_amount');
+        $profitCost = DB::table('sale_items')
+            ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
+            ->where('sales.status', 'completed')
+            ->whereNotNull('sale_items.unit_cost')
+            ->whereIn('sales.id', (clone $eligibleSales)->select('id'))
+            ->selectRaw('COALESCE(SUM(sale_items.quantity * sale_items.unit_cost), 0) as total_cost')
+            ->value('total_cost');
+
+        $totalProfit = (float) $profitRevenue - (float) $profitCost;
+        $eligibleSalesCount = (clone $eligibleSales)->count();
+
         $paymentBreakdown = DB::table('sales')
             ->join('payments', 'payments.sale_id', '=', 'sales.id')
             ->where('sales.status', 'completed')
+            ->when(! empty($validated['from']), fn ($query) => $query->whereDate('sales.created_at', '>=', $validated['from']))
+            ->when(! empty($validated['to']), fn ($query) => $query->whereDate('sales.created_at', '<=', $validated['to']))
             ->select(
                 'payments.payment_method',
                 DB::raw('COUNT(*) as transaction_count'),
@@ -82,6 +114,9 @@ class SalesAnalyticsController extends Controller
                 '.',
                 ''
             ),
+            'total_profit' => number_format($totalProfit, 2, '.', ''),
+            'eligible_sales_count' => $eligibleSalesCount,
+            'total_completed_sales' => $totalTransactions,
             'payment_breakdown' => $paymentBreakdown,
         ]);
     }

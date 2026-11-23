@@ -146,6 +146,16 @@ class CheckoutService
                     (string) $variant->price
                 );
 
+                if ($variant->cost_price === null) {
+                    throw ValidationException::withMessages([
+                        'items' => "Purchase cost is missing for {$variant->sku}.",
+                    ]);
+                }
+
+                $costCents = $this->toCents(
+                    (string) $variant->cost_price
+                );
+
                 $lineCents = $priceCents * $item['quantity'];
                 $subtotalCents += $lineCents;
 
@@ -153,6 +163,7 @@ class CheckoutService
                     'variant' => $variant,
                     'quantity' => $item['quantity'],
                     'price_cents' => $priceCents,
+                    'cost_cents' => $costCents,
                     'line_cents' => $lineCents,
                 ];
             }
@@ -221,6 +232,7 @@ class CheckoutService
                     'quantity' => $quantity,
                     'unit_price' => $this->money($line['price_cents']),
                     'subtotal' => $this->money($line['line_cents']),
+                    'unit_cost' => $this->money($line['cost_cents']),
                 ]);
 
                 $variant->update([
